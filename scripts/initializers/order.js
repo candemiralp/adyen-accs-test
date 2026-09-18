@@ -71,6 +71,13 @@ await initializeDropin(async () => {
     langDefinitions,
     orderRef,
     returnRef,
+    models: {
+      OrderModel: {
+        transformer: (data) => ({
+          payment_methods: data?.payment_methods,
+        }),
+      },
+    },
   });
 })();
 
@@ -114,10 +121,33 @@ async function handleUserOrdersRedirects(
   if (targetPath) {
     window.location.href = rootLink(targetPath);
   } else {
+    // Check for cached order data written by express checkout redirect.
+    // If present, pass it directly to initialize so it short-circuits the
+    // GraphQL fetch (avoiding an order/error → /order-status redirect when
+    // guestOrderByToken returns no data).
+    let cachedOrderData = null;
+    try {
+      const raw = sessionStorage.getItem('recent_order_data');
+      if (raw) {
+        cachedOrderData = JSON.parse(raw);
+        sessionStorage.removeItem('recent_order_data');
+      }
+    } catch {
+      // Ignore sessionStorage/JSON errors
+    }
+
     await initializers.mountImmediately(initialize, {
       langDefinitions,
       orderRef,
       returnRef,
+      ...(cachedOrderData ? { orderData: cachedOrderData } : {}),
+    });
+
+    // ponytail: sections hidden during init, ensure they display after order dropin loads
+    document.querySelectorAll('div.section').forEach((section) => {
+      if (section.style.display === 'none') {
+        section.style.display = null;
+      }
     });
   }
 }

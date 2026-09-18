@@ -47,6 +47,49 @@ function extractMainImageUrl() {
 }
 
 /**
+ * Validates if a URL is valid and safe to preload
+ * @param {string} url The URL to validate
+ * @returns {boolean} True if the URL is valid
+ */
+function isValidImageUrl(url) {
+  if (!url || typeof url !== 'string' || url.trim().length === 0) {
+    return false;
+  }
+
+  // Reject URLs that have been rewritten by AEM image optimization
+  // These URLs have ?width=, &format=, &optimize= query params and cause SSL protocol errors
+  if (url.includes('?width=') || url.includes('&format=') || url.includes('&optimize=')) {
+    return false;
+  }
+
+  // Reject fallback/placeholder URLs
+  if (url.includes('default-meta-image')) {
+    return false;
+  }
+
+  // Check if it's a valid HTTP(S) URL or an absolute path
+  try {
+    // Try to parse as URL for absolute HTTP(S) URLs
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      // eslint-disable-next-line no-unused-vars
+      const parsedUrl = new URL(url);
+      return true;
+    }
+    // Allow absolute paths like /images/...
+    if (url.startsWith('/')) {
+      return true;
+    }
+    // Allow protocol-relative URLs like //example.com/image.png
+    if (url.startsWith('//')) {
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Preloads PDP Dropins assets for optimal performance
  */
 function preloadPDPAssets() {
@@ -64,11 +107,17 @@ function preloadPDPAssets() {
 
   // Extract and preload main product image
   const imageUrl = extractMainImageUrl();
+  const isValid = isValidImageUrl(imageUrl);
+  console.warn(`[pdp] Image URL extraction: url="${imageUrl}" valid=${isValid}`);
 
-  if (imageUrl) {
+  // Validate image URL before preloading to avoid 404 errors and protocol mismatches
+  if (isValid) {
+    console.warn(`[pdp] Preloading image: ${imageUrl}`);
     preloadFile(imageUrl, 'image');
+  } else if (imageUrl) {
+    console.warn(`[pdp] Skipping preload of invalid image URL: "${imageUrl}"`);
   } else {
-    console.warn('Unable to infer main image from JSON-LD or meta tags');
+    console.warn('[pdp] No image URL to preload (empty/null)');
   }
 }
 
@@ -124,7 +173,7 @@ async function preloadImageMiddleware(data) {
     let imageParams = {
       ...IMAGES_SIZES,
     };
-    if (isAemAssetsEnabled()) {
+    if (isAemAssetsEnabled) {
       url = tryGenerateAemAssetsOptimizedUrl(image, data.sku, {});
       imageParams = {
         ...imageParams,

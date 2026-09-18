@@ -44,32 +44,18 @@ import CreditCard from '@dropins/storefront-payment-services/containers/CreditCa
 import { render as PaymentServices } from '@dropins/storefront-payment-services/render.js';
 
 // Tools
-import {
-  Header,
-  provider as UI,
-} from '@dropins/tools/components.js';
+import { Header, provider as UI } from '@dropins/tools/components.js';
 import { events } from '@dropins/tools/event-bus.js';
 import { debounce } from '@dropins/tools/lib.js';
 import { tryRenderAemAssetsImage } from '@dropins/tools/lib/aem/assets.js';
 
-// Checkout Dropin Libs
+// Constants
 import {
   estimateShippingCost,
   setAddressOnCart,
   getCartAddress,
   transformCartAddressToFormValues,
 } from '@dropins/storefront-checkout/lib/utils.js';
-
-import { showModal, swatchImageSlot } from './utils.js';
-
-// External dependencies
-import {
-  authPrivacyPolicyConsentSlot,
-  fetchPlaceholders,
-  rootLink,
-} from '../../scripts/commerce.js';
-
-// Constants
 import {
   ADDRESS_INPUT_DEBOUNCE_TIME,
   BILLING_ADDRESS_DATA_KEY,
@@ -81,6 +67,81 @@ import {
   SHIPPING_ADDRESS_DATA_KEY,
   SHIPPING_FORM_NAME,
 } from './constants.js';
+
+// Check out Dropin Libs
+
+import { getAdyenCDNLogoUrl } from '../adyen-payment/utils.js';
+import { getAdyenConfiguration } from '../adyen-payment/index.js';
+import { showModal, swatchImageSlot } from './utils.js';
+
+// External dependencies
+import {
+  authPrivacyPolicyConsentSlot,
+  fetchPlaceholders,
+  rootLink,
+} from '../../scripts/commerce.js';
+
+// Browser compatibility check for Apple Pay
+function isApplePaySupportedBrowser() {
+  const ua = window.navigator.userAgent;
+  return /Safari/.test(ua) && !/Chrome|Firefox|Edge|OPR/.test(ua);
+}
+
+// Browser compatibility check for Google Pay
+function isGooglePaySupportedBrowser() {
+  const ua = window.navigator.userAgent;
+  // Google Pay is available on Chrome, Edge, and Android browsers,
+  // but NOT on Safari or Firefox
+  const isSafari = /Safari/.test(ua) && !/Chrome|Firefox|Edge|OPR/.test(ua);
+  const isFirefox = /Firefox/.test(ua);
+
+  return !isSafari && !isFirefox;
+}
+
+// Log browser support on init
+console.debug('[checkout] Apple Pay browser support:', isApplePaySupportedBrowser());
+console.debug('[checkout] Google Pay browser support:', isGooglePaySupportedBrowser());
+
+// ponytail: Import throttle to avoid CDN 429 rate limits when multiple payment
+// method renderers fire dynamic imports in parallel. Queues imports with 100ms spacing.
+// Includes exponential backoff retry on 429 (Too Many Requests).
+let importQueue = Promise.resolve();
+// eslint-disable-next-line no-promise-executor-return
+const queueDynamicImport = async (path, maxRetries = 3) => {
+  importQueue = importQueue.then(
+    () => new Promise((resolve) => {
+      setTimeout(resolve, 100);
+    }),
+  );
+
+  let lastError;
+  // eslint-disable-next-line no-await-in-loop
+  for (let attempt = 0; attempt < maxRetries; attempt += 1) {
+    try {
+      return import(path);
+    } catch (err) {
+      lastError = err;
+      // Check if this is a network error (likely 429 or similar rate limit)
+      const isNetworkError = err?.message?.includes('Failed to fetch')
+                             || err?.message?.includes('ERR_')
+                             || err?.status === 429;
+
+      if (!isNetworkError || attempt === maxRetries - 1) {
+        throw err;
+      }
+
+      // Exponential backoff: 500ms, 1s, 2s
+      const delayMs = 2 ** attempt * 500;
+      console.warn(`[checkout] Dynamic import failed for ${path} (attempt ${attempt + 1}/${maxRetries}), retrying in ${delayMs}ms...`, err);
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((resolve) => {
+        setTimeout(resolve, delayMs);
+      });
+    }
+  }
+
+  throw lastError;
+};
 
 /**
  * Container IDs for registry management
@@ -149,7 +210,7 @@ const renderContainer = async (id, renderFn) => {
     registry.set(id, container);
     return container;
   } catch (error) {
-    console.error(`Error rendering container ${id}:`, error);
+    console.debug(`Error rendering container ${id}:`, error);
     throw error;
   }
 };
@@ -172,14 +233,30 @@ export const unmountContainer = (id) => {
 };
 
 /**
+ * Safe wrapper for payment method render functions that handles import errors gracefully
+ * @param {string} methodName - Name of the payment method (for logging)
+ * @param {Function} renderFn - The render function to wrap
+ * @returns {Function} - Wrapped render function with error handling
+ */
+const createSafePaymentRender = (methodName, renderFn) => async (ctx) => {
+  try {
+    await renderFn(ctx);
+  } catch (error) {
+    console.error(`[checkout] Failed to render ${methodName}:`, error);
+    // Show error message to user
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'checkout__payment-error';
+    errorDiv.textContent = `Unable to load ${methodName}. Please try again or use another payment method.`;
+    ctx.replaceHTML(errorDiv);
+  }
+};
+
+/**
  * Renders the merged cart banner notification for authenticated users
  * @param {HTMLElement} container - DOM element to render the banner in
  * @returns {Promise<Object>} - The rendered merged cart banner component
  */
-export const renderMergedCartBanner = async (container) => renderContainer(
-  CONTAINERS.MERGED_CART_BANNER,
-  async () => CheckoutProvider.render(MergedCartBanner)(container),
-);
+export const renderMergedCartBanner = async (container) => renderContainer(CONTAINERS.MERGED_CART_BANNER, async () => CheckoutProvider.render(MergedCartBanner)(container));
 
 /**
  * Renders the checkout page header with title and styling
@@ -187,16 +264,13 @@ export const renderMergedCartBanner = async (container) => renderContainer(
  * @param {string} title - The title to display in the header
  * @returns {Promise<Object>} - The rendered checkout header component
  */
-export const renderCheckoutHeader = async (container, title) => renderContainer(
-  CONTAINERS.CHECKOUT_HEADER,
-  async () => UI.render(Header, {
-    className: CHECKOUT_HEADER_CLASS,
-    divider: true,
-    level: 1,
-    size: 'large',
-    title,
-  })(container),
-);
+export const renderCheckoutHeader = async (container, title) => renderContainer(CONTAINERS.CHECKOUT_HEADER, async () => UI.render(Header, {
+  className: CHECKOUT_HEADER_CLASS,
+  divider: true,
+  level: 1,
+  size: 'large',
+  title,
+})(container));
 
 /**
  * Renders server error handling with retry functionality and error state management
@@ -204,38 +278,32 @@ export const renderCheckoutHeader = async (container, title) => renderContainer(
  * @param {HTMLElement} contentElement - Main content element to add error styling to
  * @returns {Promise<Object>} - The rendered server error component
  */
-export const renderServerError = async (container, contentElement) => renderContainer(
-  CONTAINERS.SERVER_ERROR,
-  async () => CheckoutProvider.render(ServerError, {
-    autoScroll: true,
-    onRetry: (error) => {
-      if (error.code === 'PERMISSION_DENIED') {
-        document.location.reload();
-        return;
-      }
+export const renderServerError = async (container, contentElement) => renderContainer(CONTAINERS.SERVER_ERROR, async () => CheckoutProvider.render(ServerError, {
+  autoScroll: true,
+  onRetry: (error) => {
+    if (error.code === 'PERMISSION_DENIED') {
+      document.location.reload();
+      return;
+    }
 
-      contentElement.classList.remove(CHECKOUT_ERROR_CLASS);
-    },
-    onServerError: () => {
-      contentElement.classList.add(CHECKOUT_ERROR_CLASS);
-    },
-  })(container),
-);
+    contentElement.classList.remove(CHECKOUT_ERROR_CLASS);
+  },
+  onServerError: () => {
+    contentElement.classList.add(CHECKOUT_ERROR_CLASS);
+  },
+})(container));
 
 /**
- * Renders out of stock handling with cart navigation and product update options
+ * Renders out-of-stock handling with cart navigation and product update options
  * @param {HTMLElement} container - DOM element to render the component in
  * @returns {Promise<Object>} - The rendered out-of-stock component
  */
-export const renderOutOfStock = async (container) => renderContainer(
-  CONTAINERS.OUT_OF_STOCK,
-  async () => CheckoutProvider.render(OutOfStock, {
-    routeCart: () => rootLink('/cart'),
-    onCartProductsUpdate: (items) => {
-      cartApi.updateProductsFromCart(items).catch(console.error);
-    },
-  })(container),
-);
+export const renderOutOfStock = async (container) => renderContainer(CONTAINERS.OUT_OF_STOCK, async () => CheckoutProvider.render(OutOfStock, {
+  routeCart: () => rootLink('/cart'),
+  onCartProductsUpdate: (items) => {
+    cartApi.updateProductsFromCart(items).catch(console.error);
+  },
+})(container));
 
 /**
  * Renders the login form for guest checkout with authentication options
@@ -243,94 +311,81 @@ export const renderOutOfStock = async (container) => renderContainer(
  * @param {HTMLElement} container - DOM element to render the login form in
  * @returns {Promise<Object>} - The rendered login form component
  */
-export const renderLoginForm = async (container) => renderContainer(
-  CONTAINERS.LOGIN_FORM,
-  async () => CheckoutProvider.render(LoginForm, {
-    name: LOGIN_FORM_NAME,
-    onSignInClick: async (initialEmailValue) => {
-      const signInForm = document.createElement('div');
+export const renderLoginForm = async (container) => renderContainer(CONTAINERS.LOGIN_FORM, async () => CheckoutProvider.render(LoginForm, {
+  name: LOGIN_FORM_NAME,
+  onSignInClick: async (initialEmailValue) => {
+    const signInForm = document.createElement('div');
 
-      AuthProvider.render(AuthCombine, {
-        signInFormConfig: {
-          renderSignUpLink: true,
-          initialEmailValue,
-          // No onSuccessCallback needed - the 'authenticated' event will be fired automatically
+    AuthProvider.render(AuthCombine, {
+      signInFormConfig: {
+        renderSignUpLink: true,
+        initialEmailValue,
+        // No onSuccessCallback needed - the 'authenticated' event will be fired automatically
+      },
+      signUpFormConfig: {
+        slots: {
+          ...authPrivacyPolicyConsentSlot,
         },
-        signUpFormConfig: {
-          slots: {
-            ...authPrivacyPolicyConsentSlot,
-          },
-        },
-        resetPasswordFormConfig: {},
-      })(signInForm);
+      },
+      resetPasswordFormConfig: {},
+    })(signInForm);
 
-      await showModal(signInForm);
-    },
-    onSignOutClick: () => {
-      authApi.revokeCustomerToken();
-    },
-  })(container),
-);
+    await showModal(signInForm);
+  },
+  onSignOutClick: () => {
+    authApi.revokeCustomerToken();
+  },
+})(container));
 
 /**
  * Renders the shipping address form skeleton (initial placeholder)
  * @param {HTMLElement} container - DOM element to render the form in
  * @returns {Promise<Object>} - The rendered shipping address form skeleton
  */
-export const renderShippingAddressFormSkeleton = async (container) => renderContainer(
-  CONTAINERS.SHIPPING_ADDRESS_FORM_SKELETON,
-  async () => AccountProvider.render(AddressForm, {
-    fieldIdPrefix: 'shipping',
-    isOpen: true,
-    showFormLoader: true,
-  })(container),
-);
+export const renderShippingAddressFormSkeleton = async (container) => renderContainer(CONTAINERS.SHIPPING_ADDRESS_FORM_SKELETON, async () => AccountProvider.render(AddressForm, {
+  fieldIdPrefix: 'shipping',
+  isOpen: true,
+  showFormLoader: true,
+})(container));
 
 /**
  * Renders the billing address form skeleton (initial placeholder)
  * @param {HTMLElement} container - DOM element to render the form in
  * @returns {Promise<Object>} - The rendered billing address form skeleton
  */
-export const renderBillingAddressFormSkeleton = async (container) => renderContainer(
-  CONTAINERS.BILLING_ADDRESS_FORM_SKELETON,
-  async () => AccountProvider.render(AddressForm, {
-    fieldIdPrefix: 'billing',
-    isOpen: true,
-    showFormLoader: true,
-  })(container),
-);
+export const renderBillingAddressFormSkeleton = async (container) => renderContainer(CONTAINERS.BILLING_ADDRESS_FORM_SKELETON, async () => AccountProvider.render(AddressForm, {
+  fieldIdPrefix: 'billing',
+  isOpen: true,
+  showFormLoader: true,
+})(container));
 
 /**
  * Renders checkbox to set billing address same as shipping address - original regular checkout functionality
  * @param {HTMLElement} container - DOM element to render the checkbox in
  * @returns {Promise<Object>} - The rendered bill to shipping address component
  */
-export const renderBillToShippingAddress = async (container) => renderContainer(
-  CONTAINERS.BILL_TO_SHIPPING_ADDRESS,
-  async () => {
-    const setBillingAddressOnCart = setAddressOnCart({ type: 'billing' });
+export const renderBillToShippingAddress = async (container) => renderContainer(CONTAINERS.BILL_TO_SHIPPING_ADDRESS, async () => {
+  const setBillingAddressOnCart = setAddressOnCart({ type: 'billing' });
 
-    return CheckoutProvider.render(BillToShippingAddress, {
-      onChange: (checked) => {
-        const billingFormValues = events.lastPayload('checkout/addresses/billing');
+  return CheckoutProvider.render(BillToShippingAddress, {
+    onChange: (checked) => {
+      const billingFormValues = events.lastPayload(
+        'checkout/addresses/billing',
+      );
 
-        if (!checked && billingFormValues) {
-          setBillingAddressOnCart(billingFormValues);
-        }
-      },
-    })(container);
-  },
-);
+      if (!checked && billingFormValues) {
+        setBillingAddressOnCart(billingFormValues);
+      }
+    },
+  })(container);
+});
 
 /**
  * Renders available shipping methods with selection interface
  * @param {HTMLElement} container - DOM element to render shipping methods in
  * @returns {Promise<Object>} - The rendered shipping methods component
  */
-export const renderShippingMethods = async (container) => renderContainer(
-  CONTAINERS.SHIPPING_METHODS,
-  async () => CheckoutProvider.render(ShippingMethods)(container),
-);
+export const renderShippingMethods = async (container) => renderContainer(CONTAINERS.SHIPPING_METHODS, async () => CheckoutProvider.render(ShippingMethods)(container));
 
 /**
  * Renders payment methods with credit card integration - original regular checkout functionality
@@ -338,65 +393,475 @@ export const renderShippingMethods = async (container) => renderContainer(
  * @param {Object} creditCardFormRef - React-style ref for credit card form
  * @returns {Promise<Object>} - The rendered payment methods component
  */
-export const renderPaymentMethods = async (container, creditCardFormRef) => renderContainer(
-  CONTAINERS.PAYMENT_METHODS,
-  async () => CheckoutProvider.render(PaymentMethods, {
-    slots: {
-      Methods: {
-        [PaymentMethodCode.CREDIT_CARD]: {
-          render: (ctx) => {
-            const $creditCard = document.createElement('div');
+/**
+ * Builds the payment methods slots configuration,
+ * conditionally including Apple Pay on Safari only
+ * @returns {Object} Methods slot configuration
+ */
+function buildPaymentMethodsSlots() {
+  const methods = {
+    [PaymentMethodCode.CREDIT_CARD]: {
+      enabled: false,
+    },
+    [PaymentMethodCode.SMART_BUTTONS]: {
+      enabled: false,
+    },
+    [PaymentMethodCode.APPLE_PAY]: {
+      enabled: false,
+    },
+    [PaymentMethodCode.GOOGLE_PAY]: {
+      enabled: false,
+    },
+    [PaymentMethodCode.VAULT]: {
+      enabled: false,
+    },
+    [PaymentMethodCode.FASTLANE]: {
+      enabled: false,
+    },
+    adyen_scheme: {
+      icon: `${window.location.origin}/blocks/adyen-payment-cards/scheme.svg`,
+      /**
+             * Render
+             * @param ctx {PaymentMethodRenderCtx}
+             * @returns {Promise<void>}
+             */
+      render: async (ctx) => {
+        try {
+          const $methodContentBlock = document.createElement('div');
 
-            PaymentServices.render(CreditCard, {
-              getCartId: () => ctx.cartId,
-              creditCardFormRef,
-            })($creditCard);
+          // Dynamically import payment method decorator
+          const { default: decorateMethod } = await queueDynamicImport(
+            '../adyen-payment-cards/adyen-payment-cards.js',
+          );
 
-            ctx.replaceHTML($creditCard);
-          },
-        },
-        [PaymentMethodCode.SMART_BUTTONS]: {
-          enabled: false,
-        },
-        [PaymentMethodCode.APPLE_PAY]: {
-          enabled: false,
-        },
-        [PaymentMethodCode.APM]: {
-          enabled: false,
-        },
-        [PaymentMethodCode.GOOGLE_PAY]: {
-          enabled: false,
-        },
-        [PaymentMethodCode.VAULT]: {
-          enabled: false,
-        },
-        [PaymentMethodCode.FASTLANE]: {
-          enabled: false,
-        },
+          // Decorate and render the payment method
+          $methodContentBlock.className = 'checkout__adyen-cards';
+          $methodContentBlock.id = 'adyen-card-component';
+
+          ctx.replaceHTML($methodContentBlock);
+          setTimeout(async () => {
+            const element = document.getElementById('adyen-card-component');
+            await decorateMethod(element);
+          }, 100);
+        } catch (error) {
+          console.error('[checkout] Failed to render credit card form:', error);
+          // Show error message to user
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'checkout__payment-error';
+          errorDiv.textContent = 'Unable to load credit card form. Please try again or use another payment method.';
+          ctx.replaceHTML(errorDiv);
+        }
       },
     },
-  })(container),
-);
+    adyen_klarna: {
+      icon: `${window.location.origin}/blocks/adyen-payment-klarna/klarna.svg`,
+      render: createSafePaymentRender('Klarna', async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-klarna',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+        $methodContentBlock.dataset.type = 'klarna';
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-klarna/adyen-payment-klarna.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-klarna';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      }),
+    },
+    adyen_klarna_US: {
+      icon: `${window.location.origin}/blocks/adyen-payment-klarna/klarna.svg`,
+      render: async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-klarna_US',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+        $methodContentBlock.dataset.type = 'klarna';
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-klarna/adyen-payment-klarna.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-klarna_US';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      },
+    },
+    adyen_klarna_account: {
+      icon: `${window.location.origin}/blocks/adyen-payment-klarna/klarna.svg`,
+      render: async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-klarna_account',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+        $methodContentBlock.dataset.type = 'klarna_account';
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-klarna/adyen-payment-klarna.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-klarna_account';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      },
+    },
+    adyen_klarna_account_US: {
+      icon: `${window.location.origin}/blocks/adyen-payment-klarna/klarna.svg`,
+      render: async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-klarna_account_US',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+        $methodContentBlock.dataset.type = 'klarna_account';
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-klarna/adyen-payment-klarna.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-klarna_account_US';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      },
+    },
+    adyen_klarna_account_AU: {
+      icon: `${window.location.origin}/blocks/adyen-payment-klarna/klarna.svg`,
+      render: async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-klarna_account_AU',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+        $methodContentBlock.dataset.type = 'klarna_account';
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-klarna/adyen-payment-klarna.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-klarna_account_AU';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      },
+    },
+    adyen_klarna_paynow: {
+      icon: `${window.location.origin}/blocks/adyen-payment-klarna/klarna.svg`,
+      render: async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-klarna_paynow',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+        $methodContentBlock.dataset.type = 'klarna_paynow';
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-klarna/adyen-payment-klarna.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-klarna_paynow';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      },
+    },
+    adyen_paypal: {
+      icon: `${window.location.origin}/blocks/adyen-payment-paypal/paypal.svg`,
+      render: async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-paypal',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-paypal/adyen-payment-paypal.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-paypal';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      },
+    },
+    adyen_affirm: {
+      icon: `${window.location.origin}/blocks/adyen-payment-affirm/affirm.svg`,
+      render: async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-affirm',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-affirm/adyen-payment-affirm.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-affirm';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      },
+    },
+    adyen_ach: {
+      icon: `${window.location.origin}/blocks/adyen-payment-ach/ach.svg`,
+      render: async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-ach',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-ach/adyen-payment-ach.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-ach';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      },
+    },
+    adyen_sepadirectdebit: {
+      icon: `${window.location.origin}/blocks/adyen-payment-sepa/sepa.svg`,
+      render: async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-sepa',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-sepa/adyen-payment-sepa.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-sepa';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      },
+    },
+    adyen_directdebit_GB: {
+      icon: `${window.location.origin}/blocks/adyen-payment-bacs/bacs.svg`,
+      render: async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-bacs',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-bacs/adyen-payment-bacs.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-bacs';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      },
+    },
+    adyen_bcmc: {
+      icon: `${window.location.origin}/blocks/adyen-payment-bancontact/bancontact.svg`,
+      render: async (ctx) => {
+        const $methodContentBlock = document.createElement('div');
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-bancontact/adyen-payment-bancontact.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-bancontact';
+        $methodContentBlock.id = 'adyen-bancontact';
+        ctx.replaceHTML($methodContentBlock);
+        setTimeout(async () => {
+          const element = document.getElementById('adyen-bancontact');
+          await decorateMethod(element);
+        }, 100);
+      },
+    },
+    adyen_ideal: {
+      icon: `${window.location.origin}/blocks/adyen-payment-ideal/iDeal.svg`,
+      render: async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-ideal',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-ideal/adyen-payment-ideal.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-ideal';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      },
+    },
+  };
+
+  // Only include Google Pay slot on supported browsers (Chrome, Edge, Android)
+  // On unsupported browsers (Safari/Firefox), explicitly disable it
+  if (isGooglePaySupportedBrowser()) {
+    methods.adyen_googlepay = {
+      icon: `${window.location.origin}/blocks/adyen-payment-googlepay/googlepay.svg`,
+      render: async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-googlepay',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-googlepay/adyen-payment-googlepay.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-googlepay';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      },
+    };
+  } else {
+    // On Safari/Firefox, explicitly disable Google Pay to prevent default rendering
+    methods.adyen_googlepay = {
+      enabled: false,
+    };
+  }
+
+  // Only include Apple Pay slot on Safari browsers
+  // On non-Safari browsers, explicitly disable it to prevent default rendering
+  if (isApplePaySupportedBrowser()) {
+    methods.adyen_applepay = {
+      icon: `${window.location.origin}/blocks/adyen-payment-applepay/applepay.svg`,
+      render: async (ctx) => {
+        // Check if already rendered to prevent loops
+        const existingContainer = document.querySelector(
+          '.checkout__adyen-applepay',
+        );
+        if (existingContainer && existingContainer.hasChildNodes()) {
+          return;
+        }
+
+        const $methodContentBlock = document.createElement('div');
+
+        // Dynamically import payment method decorator
+        const { default: decorateMethod } = await queueDynamicImport(
+          '../adyen-payment-applepay/adyen-payment-applepay.js',
+        );
+
+        // Decorate and render the payment method
+        $methodContentBlock.className = 'checkout__adyen-applepay';
+        await decorateMethod($methodContentBlock);
+        ctx.replaceHTML($methodContentBlock);
+      },
+    };
+  } else {
+    // On non-Safari browsers, explicitly disable Apple Pay to prevent default rendering
+    methods.adyen_applepay = {
+      enabled: false,
+    };
+  }
+
+  return methods;
+}
+
+export const renderPaymentMethods = async (container, creditCardFormRef) => renderContainer(CONTAINERS.PAYMENT_METHODS, async () => CheckoutProvider.render(PaymentMethods, {
+  slots: {
+    Methods: buildPaymentMethodsSlots(),
+  },
+})(container));
 
 /**
  * Renders terms and conditions with agreement slots and manual consent mode
  * @param {HTMLElement} container - DOM element to render the terms in
  * @returns {Promise<Object>} - The rendered terms and conditions component
  */
-export const renderTermsAndConditions = async (container) => renderContainer(
-  CONTAINERS.TERMS_AND_CONDITIONS,
-  async () => CheckoutProvider.render(TermsAndConditions, {
-    slots: {
-      Agreements: (ctx) => {
-        ctx.appendAgreement(() => ({
-          name: 'default',
-          mode: 'manual',
-          translationId: 'Checkout.TermsAndConditions.label',
-        }));
-      },
+export const renderTermsAndConditions = async (container) => renderContainer(CONTAINERS.TERMS_AND_CONDITIONS, async () => CheckoutProvider.render(TermsAndConditions, {
+  slots: {
+    Agreements: (ctx) => {
+      ctx.appendAgreement(() => ({
+        name: 'default',
+        mode: 'manual',
+        translationId: 'Checkout.TermsAndConditions.label',
+      }));
     },
-  })(container),
-);
+  },
+})(container));
 
 /**
  * Renders estimate shipping form for order summary slot
@@ -464,80 +929,73 @@ export const renderCartGiftOptions = (ctx) => {
  * @param {HTMLElement} container - DOM element to render order summary in
  * @returns {Promise<Object>} - The rendered order summary component
  */
-export const renderOrderSummary = async (container) => renderContainer(
-  CONTAINERS.ORDER_SUMMARY,
-  async () => CartProvider.render(OrderSummary, {
-    slots: {
-      EstimateShipping: renderEstimateShipping,
-      Coupons: renderCartCoupons,
-      GiftCards: renderGiftCards,
-    },
-  })(container),
-);
+export const renderOrderSummary = async (container) => renderContainer(CONTAINERS.ORDER_SUMMARY, async () => CartProvider.render(OrderSummary, {
+  slots: {
+    EstimateShipping: renderEstimateShipping,
+    Coupons: renderCartCoupons,
+    GiftCards: renderGiftCards,
+  },
+})(container));
 
 /**
  * Renders cart summary list with custom heading, thumbnail and gift options slots
  * @param {HTMLElement} container - DOM element to render cart summary list in
  * @returns {Promise<Object>} - The rendered cart summary list component
  */
-export const renderCartSummaryList = async (container) => renderContainer(
-  CONTAINERS.CART_SUMMARY_LIST,
-  async () => {
-    const placeholders = await fetchPlaceholders('placeholders/checkout.json');
+export const renderCartSummaryList = async (container) => renderContainer(CONTAINERS.CART_SUMMARY_LIST, async () => {
+  const placeholders = await fetchPlaceholders('placeholders/checkout.json');
 
-    return CartProvider.render(CartSummaryList, {
-      variant: 'secondary',
-      slots: {
-        Heading: (headingCtx) => {
-          const title = placeholders?.Checkout?.Summary?.heading;
+  return CartProvider.render(CartSummaryList, {
+    variant: 'secondary',
+    slots: {
+      Heading: (headingCtx) => {
+        const title = placeholders?.Checkout?.Summary?.heading || 'Summary ({count})';
 
-          const cartSummaryListHeading = document.createElement('div');
-          cartSummaryListHeading.classList.add('cart-summary-list__heading');
+        const cartSummaryListHeading = document.createElement('div');
+        cartSummaryListHeading.classList.add('cart-summary-list__heading');
 
-          const cartSummaryListHeadingText = document.createElement('div');
-          cartSummaryListHeadingText.classList.add(
-            'cart-summary-list__heading-text',
-          );
+        const cartSummaryListHeadingText = document.createElement('div');
+        cartSummaryListHeadingText.classList.add(
+          'cart-summary-list__heading-text',
+        );
 
-          cartSummaryListHeadingText.innerText = title?.replace(
+        cartSummaryListHeadingText.innerText = title.replace(
+          '({count})',
+          headingCtx.count ? `(${headingCtx.count})` : '',
+        );
+        const editCartLink = document.createElement('a');
+        editCartLink.classList.add('cart-summary-list__edit');
+        editCartLink.href = rootLink('/cart');
+        editCartLink.rel = 'noreferrer';
+        editCartLink.innerText = placeholders?.Checkout?.Summary?.Edit;
+
+        cartSummaryListHeading.appendChild(cartSummaryListHeadingText);
+        cartSummaryListHeading.appendChild(editCartLink);
+        headingCtx.appendChild(cartSummaryListHeading);
+
+        headingCtx.onChange((nextHeadingCtx) => {
+          cartSummaryListHeadingText.innerText = title.replace(
             '({count})',
-            headingCtx.count ? `(${headingCtx.count})` : '',
+            nextHeadingCtx.count ? `(${nextHeadingCtx.count})` : '',
           );
-          const editCartLink = document.createElement('a');
-          editCartLink.classList.add('cart-summary-list__edit');
-          editCartLink.href = rootLink('/cart');
-          editCartLink.rel = 'noreferrer';
-          editCartLink.innerText = placeholders?.Checkout?.Summary?.Edit;
-          editCartLink.setAttribute('aria-label', `${placeholders?.Checkout?.Summary?.Edit} cart`);
-
-          cartSummaryListHeading.appendChild(cartSummaryListHeadingText);
-          cartSummaryListHeading.appendChild(editCartLink);
-          headingCtx.appendChild(cartSummaryListHeading);
-
-          headingCtx.onChange((nextHeadingCtx) => {
-            cartSummaryListHeadingText.innerText = title?.replace(
-              '({count})',
-              nextHeadingCtx.count ? `(${nextHeadingCtx.count})` : '',
-            );
-          });
-        },
-        Thumbnail: (ctx) => {
-          const { item, defaultImageProps } = ctx;
-          tryRenderAemAssetsImage(ctx, {
-            alias: item.sku,
-            imageProps: defaultImageProps,
-
-            params: {
-              width: defaultImageProps.width,
-              height: defaultImageProps.height,
-            },
-          });
-        },
-        Footer: renderCartGiftOptions,
+        });
       },
-    })(container);
-  },
-);
+      Thumbnail: (ctx) => {
+        const { item, defaultImageProps } = ctx;
+        tryRenderAemAssetsImage(ctx, {
+          alias: item.sku,
+          imageProps: defaultImageProps,
+
+          params: {
+            width: defaultImageProps.width,
+            height: defaultImageProps.height,
+          },
+        });
+      },
+      Footer: renderCartGiftOptions,
+    },
+  })(container);
+});
 
 /**
  * Renders place order button with handler functions - follows multi-step pattern
@@ -547,13 +1005,10 @@ export const renderCartSummaryList = async (container) => renderContainer(
  * @param {Function} options.handlePlaceOrder - Place order handler function
  * @returns {Promise<Object>} - The rendered place order component
  */
-export const renderPlaceOrder = async (container, options = {}) => renderContainer(
-  CONTAINERS.PLACE_ORDER_BUTTON,
-  async () => CheckoutProvider.render(PlaceOrder, {
-    handleValidation: options.handleValidation,
-    handlePlaceOrder: options.handlePlaceOrder,
-  })(container),
-);
+export const renderPlaceOrder = async (container, options = {}) => renderContainer(CONTAINERS.PLACE_ORDER_BUTTON, async () => CheckoutProvider.render(PlaceOrder, {
+  handleValidation: options.handleValidation,
+  handlePlaceOrder: options.handlePlaceOrder,
+})(container));
 
 /**
  * Renders customer shipping addresses selector/form for authenticated users - original regular checkout functionality
@@ -562,71 +1017,74 @@ export const renderPlaceOrder = async (container, options = {}) => renderContain
  * @param {Object} data - Cart data containing shipping address information
  * @returns {Promise<Object>} - The rendered customer shipping addresses component
  */
-export const renderCustomerShippingAddresses = async (container, formRef, data) => renderContainer(
-  CONTAINERS.CUSTOMER_SHIPPING_ADDRESSES,
-  async () => {
-    const placeholders = await fetchPlaceholders('placeholders/checkout.json');
+export const renderCustomerShippingAddresses = async (
+  container,
+  formRef,
+  data,
+) => renderContainer(CONTAINERS.CUSTOMER_SHIPPING_ADDRESSES, async () => {
+  const placeholders = await fetchPlaceholders('placeholders/checkout.json');
 
-    const cartShippingAddress = getCartAddress(data, 'shipping');
+  const cartShippingAddress = getCartAddress(data, 'shipping');
 
-    const shippingAddressId = cartShippingAddress
-      ? cartShippingAddress?.id ?? 0
-      : undefined;
+  const shippingAddressId = cartShippingAddress
+    ? (cartShippingAddress?.id ?? 0)
+    : undefined;
 
-    const shippingAddressCache = sessionStorage.getItem(SHIPPING_ADDRESS_DATA_KEY);
+  const shippingAddressCache = sessionStorage.getItem(
+    SHIPPING_ADDRESS_DATA_KEY,
+  );
 
-    // Clear persisted shipping address if cart has a shipping address
-    if (cartShippingAddress && shippingAddressCache) {
-      sessionStorage.removeItem(SHIPPING_ADDRESS_DATA_KEY);
-    }
+  // Clear persisted shipping address if cart has a shipping address
+  if (cartShippingAddress && shippingAddressCache) {
+    sessionStorage.removeItem(SHIPPING_ADDRESS_DATA_KEY);
+  }
 
-    const storeConfig = checkoutApi.getStoreConfigCache();
+  const storeConfig = checkoutApi.getStoreConfigCache();
 
-    const inputsDefaultValueSet = cartShippingAddress && cartShippingAddress.id === undefined
-      ? transformCartAddressToFormValues(cartShippingAddress)
-      : { countryCode: storeConfig.defaultCountry };
+  const inputsDefaultValueSet = cartShippingAddress && cartShippingAddress.id === undefined
+    ? transformCartAddressToFormValues(cartShippingAddress)
+    : { countryCode: storeConfig.defaultCountry };
 
-    const hasCartShippingAddress = Boolean(data.shippingAddresses?.[0]);
-    let isFirstRenderShipping = true;
+  const hasCartShippingAddress = Boolean(data.shippingAddresses?.[0]);
+  let isFirstRenderShipping = true;
 
-    // Create address setters with constants moved inside
-    const setShippingAddressOnCart = setAddressOnCart({
-      type: 'shipping',
-      debounceMs: DEBOUNCE_TIME,
-    });
+  // Create address setters with constants moved inside
+  const setShippingAddressOnCart = setAddressOnCart({
+    type: 'shipping',
+    debounceMs: DEBOUNCE_TIME,
+  });
 
-    const estimateShippingCostOnCart = estimateShippingCost({
-      debounceMs: DEBOUNCE_TIME,
-    });
+  const estimateShippingCostOnCart = estimateShippingCost({
+    debounceMs: DEBOUNCE_TIME,
+  });
 
-    const notifyShippingValues = debounce((values) => {
-      events.emit('checkout/addresses/shipping', values);
-    }, ADDRESS_INPUT_DEBOUNCE_TIME);
+  const notifyShippingValues = debounce((values) => {
+    events.emit('checkout/addresses/shipping', values);
+  }, ADDRESS_INPUT_DEBOUNCE_TIME);
 
-    return AccountProvider.render(Addresses, {
-      addressFormTitle: placeholders?.Checkout?.Addresses?.shippingAddressTitle,
-      defaultSelectAddressId: shippingAddressId,
-      fieldIdPrefix: 'shipping',
-      formName: SHIPPING_FORM_NAME,
-      forwardFormRef: formRef,
-      inputsDefaultValueSet,
-      minifiedView: false,
-      onAddressData: (values) => {
-        const canSetShippingAddressOnCart = !isFirstRenderShipping || !hasCartShippingAddress;
-        if (canSetShippingAddressOnCart) setShippingAddressOnCart(values);
-        if (!hasCartShippingAddress) estimateShippingCostOnCart(values);
-        if (isFirstRenderShipping) isFirstRenderShipping = false;
-        notifyShippingValues(values);
-      },
-      selectable: true,
-      selectShipping: true,
-      showBillingCheckBox: false,
-      showSaveCheckBox: true,
-      showShippingCheckBox: false,
-      title: placeholders?.Checkout?.Addresses?.shippingAddressTitle,
-    })(container);
-  },
-);
+  return AccountProvider.render(Addresses, {
+    addressFormTitle: placeholders?.Checkout?.Addresses?.shippingAddressTitle,
+    defaultSelectAddressId: shippingAddressId,
+    fieldIdPrefix: 'shipping',
+    formName: SHIPPING_FORM_NAME,
+    forwardFormRef: formRef,
+    inputsDefaultValueSet,
+    minifiedView: false,
+    onAddressData: (values) => {
+      const canSetShippingAddressOnCart = !isFirstRenderShipping || !hasCartShippingAddress;
+      if (canSetShippingAddressOnCart) setShippingAddressOnCart(values);
+      if (!hasCartShippingAddress) estimateShippingCostOnCart(values);
+      if (isFirstRenderShipping) isFirstRenderShipping = false;
+      notifyShippingValues(values);
+    },
+    selectable: true,
+    selectShipping: true,
+    showBillingCheckBox: false,
+    showSaveCheckBox: true,
+    showShippingCheckBox: false,
+    title: placeholders?.Checkout?.Addresses?.shippingAddressTitle,
+  })(container);
+});
 
 /**
  * Renders customer billing addresses selector/form for authenticated users - original regular checkout functionality
@@ -635,65 +1093,68 @@ export const renderCustomerShippingAddresses = async (container, formRef, data) 
  * @param {Object} data - Cart data containing billing address information
  * @returns {Promise<Object>} - The rendered customer billing addresses component
  */
-export const renderCustomerBillingAddresses = async (container, formRef, data) => renderContainer(
-  CONTAINERS.CUSTOMER_BILLING_ADDRESSES,
-  async () => {
-    const placeholders = await fetchPlaceholders('placeholders/checkout.json');
+export const renderCustomerBillingAddresses = async (
+  container,
+  formRef,
+  data,
+) => renderContainer(CONTAINERS.CUSTOMER_BILLING_ADDRESSES, async () => {
+  const placeholders = await fetchPlaceholders('placeholders/checkout.json');
 
-    const cartBillingAddress = getCartAddress(data, 'billing');
+  const cartBillingAddress = getCartAddress(data, 'billing');
 
-    const billingAddressId = cartBillingAddress
-      ? cartBillingAddress?.id ?? 0
-      : undefined;
+  const billingAddressId = cartBillingAddress
+    ? (cartBillingAddress?.id ?? 0)
+    : undefined;
 
-    const billingAddressCache = sessionStorage.getItem(BILLING_ADDRESS_DATA_KEY);
+  const billingAddressCache = sessionStorage.getItem(
+    BILLING_ADDRESS_DATA_KEY,
+  );
 
-    // Clear persisted billing address if cart has a billing address
-    if (cartBillingAddress && billingAddressCache) {
-      sessionStorage.removeItem(BILLING_ADDRESS_DATA_KEY);
-    }
+  // Clear persisted billing address if cart has a billing address
+  if (cartBillingAddress && billingAddressCache) {
+    sessionStorage.removeItem(BILLING_ADDRESS_DATA_KEY);
+  }
 
-    const storeConfig = checkoutApi.getStoreConfigCache();
+  const storeConfig = checkoutApi.getStoreConfigCache();
 
-    const inputsDefaultValueSet = cartBillingAddress && cartBillingAddress.id === undefined
-      ? transformCartAddressToFormValues(cartBillingAddress)
-      : { countryCode: storeConfig.defaultCountry };
+  const inputsDefaultValueSet = cartBillingAddress && cartBillingAddress.id === undefined
+    ? transformCartAddressToFormValues(cartBillingAddress)
+    : { countryCode: storeConfig.defaultCountry };
 
-    const hasCartBillingAddress = Boolean(data.billingAddress);
-    let isFirstRenderBilling = true;
+  const hasCartBillingAddress = Boolean(data.billingAddress);
+  let isFirstRenderBilling = true;
 
-    // Create address setter with constants moved inside
-    const setBillingAddressOnCart = setAddressOnCart({
-      type: 'billing',
-      debounceMs: DEBOUNCE_TIME,
-    });
+  // Create address setter with constants moved inside
+  const setBillingAddressOnCart = setAddressOnCart({
+    type: 'billing',
+    debounceMs: DEBOUNCE_TIME,
+  });
 
-    const notifyBillingValues = debounce((values) => {
-      events.emit('checkout/addresses/billing', values);
-    }, ADDRESS_INPUT_DEBOUNCE_TIME);
+  const notifyBillingValues = debounce((values) => {
+    events.emit('checkout/addresses/billing', values);
+  }, ADDRESS_INPUT_DEBOUNCE_TIME);
 
-    return AccountProvider.render(Addresses, {
-      addressFormTitle: placeholders?.Checkout?.Addresses?.billToNewAddress,
-      defaultSelectAddressId: billingAddressId,
-      formName: BILLING_FORM_NAME,
-      forwardFormRef: formRef,
-      inputsDefaultValueSet,
-      minifiedView: false,
-      onAddressData: (values) => {
-        const canSetBillingAddressOnCart = !isFirstRenderBilling || !hasCartBillingAddress;
-        if (canSetBillingAddressOnCart) setBillingAddressOnCart(values);
-        if (isFirstRenderBilling) isFirstRenderBilling = false;
-        notifyBillingValues(values);
-      },
-      selectable: true,
-      selectBilling: true,
-      showBillingCheckBox: false,
-      showSaveCheckBox: true,
-      showShippingCheckBox: false,
-      title: placeholders?.Checkout?.Addresses?.billingAddressTitle,
-    })(container);
-  },
-);
+  return AccountProvider.render(Addresses, {
+    addressFormTitle: placeholders?.Checkout?.Addresses?.billToNewAddress,
+    defaultSelectAddressId: billingAddressId,
+    formName: BILLING_FORM_NAME,
+    forwardFormRef: formRef,
+    inputsDefaultValueSet,
+    minifiedView: false,
+    onAddressData: (values) => {
+      const canSetBillingAddressOnCart = !isFirstRenderBilling || !hasCartBillingAddress;
+      if (canSetBillingAddressOnCart) setBillingAddressOnCart(values);
+      if (isFirstRenderBilling) isFirstRenderBilling = false;
+      notifyBillingValues(values);
+    },
+    selectable: true,
+    selectBilling: true,
+    showBillingCheckBox: false,
+    showSaveCheckBox: true,
+    showShippingCheckBox: false,
+    title: placeholders?.Checkout?.Addresses?.billingAddressTitle,
+  })(container);
+});
 
 /**
  * Renders address form for guest users (shipping or billing) - original regular checkout functionality
@@ -703,87 +1164,115 @@ export const renderCustomerBillingAddresses = async (container, formRef, data) =
  * @param {string} addressType - Type of address form ('shipping' or 'billing')
  * @returns {Promise<Object>} - The rendered address form component
  */
-export const renderAddressForm = async (container, formRef, data, addressType) => {
+export const renderAddressForm = async (
+  container,
+  formRef,
+  data,
+  addressType,
+) => {
   const isShipping = addressType === 'shipping';
-  const containerKey = isShipping ? CONTAINERS.SHIPPING_ADDRESS_FORM : CONTAINERS.BILLING_ADDRESS_FORM;
+  const containerKey = isShipping
+    ? CONTAINERS.SHIPPING_ADDRESS_FORM
+    : CONTAINERS.BILLING_ADDRESS_FORM;
 
-  return renderContainer(
-    containerKey,
-    async () => {
-      const placeholders = await fetchPlaceholders('placeholders/checkout.json');
+  return renderContainer(containerKey, async () => {
+    const placeholders = await fetchPlaceholders('placeholders/checkout.json');
 
-      // Get address type specific configurations
-      const cartAddress = getCartAddress(data, addressType);
-      const addressDataKey = isShipping ? SHIPPING_ADDRESS_DATA_KEY : BILLING_ADDRESS_DATA_KEY;
-      const addressCache = sessionStorage.getItem(addressDataKey);
+    // Get address type specific configurations
+    const cartAddress = getCartAddress(data, addressType);
+    const addressDataKey = isShipping
+      ? SHIPPING_ADDRESS_DATA_KEY
+      : BILLING_ADDRESS_DATA_KEY;
+    const addressCache = sessionStorage.getItem(addressDataKey);
 
-      // Clear persisted address if cart has an address
-      if (cartAddress && addressCache) {
-        sessionStorage.removeItem(addressDataKey);
+    // Clear persisted address if cart has an address
+    if (cartAddress && addressCache) {
+      sessionStorage.removeItem(addressDataKey);
+    }
+
+    let isFirstRender = true;
+    const hasCartAddress = Boolean(
+      isShipping ? data.shippingAddresses?.[0] : data.billingAddress,
+    );
+
+    // Create address setter with appropriate API
+    const setAddressOnCartFn = setAddressOnCart({
+      type: addressType,
+      debounceMs: DEBOUNCE_TIME,
+    });
+
+    // Create shipping cost estimator (only for shipping addresses)
+    const estimateShippingCostOnCart = isShipping
+      ? estimateShippingCost({
+        debounceMs: DEBOUNCE_TIME,
+      })
+      : null;
+
+    const notifyValues = debounce((values) => {
+      const eventType = isShipping
+        ? 'checkout/addresses/shipping'
+        : 'checkout/addresses/billing';
+      events.emit(eventType, values);
+    }, ADDRESS_INPUT_DEBOUNCE_TIME);
+
+    const storeConfig = checkoutApi.getStoreConfigCache();
+
+    // Address type specific configurations
+    const formName = isShipping ? SHIPPING_FORM_NAME : BILLING_FORM_NAME;
+    const addressTitle = isShipping
+      ? placeholders?.Checkout?.Addresses?.shippingAddressTitle
+      : placeholders?.Checkout?.Addresses?.billingAddressTitle;
+    const className = isShipping
+      ? 'checkout-shipping-form__address-form'
+      : 'checkout-billing-form__address-form';
+
+    let addressCacheValues = null;
+    if (addressCache) {
+      try {
+        addressCacheValues = JSON.parse(addressCache);
+      } catch {
+        /* ignore malformed cache */
       }
+    }
 
-      let isFirstRender = true;
-      const hasCartAddress = Boolean(isShipping ? data.shippingAddresses?.[0] : data.billingAddress);
+    const inputsDefaultValueSet = cartAddress
+      ? transformCartAddressToFormValues(cartAddress)
+      : (addressCacheValues ?? { countryCode: storeConfig.defaultCountry });
 
-      // Create address setter with appropriate API
-      const setAddressOnCartFn = setAddressOnCart({
-        type: addressType,
-        debounceMs: DEBOUNCE_TIME,
-      });
+    return AccountProvider.render(AddressForm, {
+      addressesFormTitle: addressTitle,
+      className,
+      fieldIdPrefix: addressType,
+      formName,
+      forwardFormRef: formRef,
+      hideActionFormButtons: true,
+      inputsDefaultValueSet,
+      isOpen: true,
+      onChange: (values) => {
+        const canSetAddressOnCart = !isFirstRender || !hasCartAddress;
+        if (canSetAddressOnCart) setAddressOnCartFn(values);
 
-      // Create shipping cost estimator (only for shipping addresses)
-      const estimateShippingCostOnCart = isShipping ? estimateShippingCost({
-        debounceMs: DEBOUNCE_TIME,
-      }) : null;
+        // Only estimate shipping cost for shipping addresses when no cart address exists
+        if (isShipping && !hasCartAddress && estimateShippingCostOnCart) {
+          estimateShippingCostOnCart(values);
+        }
 
-      const notifyValues = debounce((values) => {
-        const eventType = isShipping ? 'checkout/addresses/shipping' : 'checkout/addresses/billing';
-        events.emit(eventType, values);
-      }, ADDRESS_INPUT_DEBOUNCE_TIME);
+        if (isFirstRender) isFirstRender = false;
 
-      const storeConfig = checkoutApi.getStoreConfigCache();
+        // Persist address values so they survive a payment-failure redirect.
+        try {
+          sessionStorage.setItem(addressDataKey, JSON.stringify(values));
+        } catch {
+          /* ignore */
+        }
 
-      // Address type specific configurations
-      const formName = isShipping ? SHIPPING_FORM_NAME : BILLING_FORM_NAME;
-      const addressTitle = isShipping
-        ? placeholders?.Checkout?.Addresses?.shippingAddressTitle
-        : placeholders?.Checkout?.Addresses?.billingAddressTitle;
-      const className = isShipping
-        ? 'checkout-shipping-form__address-form'
-        : 'checkout-billing-form__address-form';
-
-      const inputsDefaultValueSet = cartAddress
-        ? transformCartAddressToFormValues(cartAddress)
-        : { countryCode: storeConfig.defaultCountry };
-
-      return AccountProvider.render(AddressForm, {
-        addressesFormTitle: addressTitle,
-        className,
-        fieldIdPrefix: addressType,
-        formName,
-        forwardFormRef: formRef,
-        hideActionFormButtons: true,
-        inputsDefaultValueSet,
-        isOpen: true,
-        onChange: (values) => {
-          const canSetAddressOnCart = !isFirstRender || !hasCartAddress;
-          if (canSetAddressOnCart) setAddressOnCartFn(values);
-
-          // Only estimate shipping cost for shipping addresses when no cart address exists
-          if (isShipping && !hasCartAddress && estimateShippingCostOnCart) {
-            estimateShippingCostOnCart(values);
-          }
-
-          if (isFirstRender) isFirstRender = false;
-
-          notifyValues(values);
-        },
-        showBillingCheckBox: false,
-        showFormLoader: false,
-        showShippingCheckBox: false,
-      })(container);
-    },
-  );
+        notifyValues(values);
+      },
+      showBillingCheckBox: false,
+      showFormLoader: false,
+      showShippingCheckBox: false,
+    })(container);
+  });
 };
 
 /**
@@ -791,14 +1280,11 @@ export const renderAddressForm = async (container, formRef, data, addressType) =
  * @param {HTMLElement} container - DOM element to render gift options in
  * @returns {Promise<Object>} - The rendered gift options component
  */
-export const renderGiftOptions = async (container) => renderContainer(
-  CONTAINERS.GIFT_OPTIONS,
-  async () => CartProvider.render(GiftOptions, {
-    view: 'order',
-    dataSource: 'cart',
-    isEditable: false,
-    slots: {
-      SwatchImage: swatchImageSlot,
-    },
-  })(container),
-);
+export const renderGiftOptions = async (container) => renderContainer(CONTAINERS.GIFT_OPTIONS, async () => CartProvider.render(GiftOptions, {
+  view: 'order',
+  dataSource: 'cart',
+  isEditable: false,
+  slots: {
+    SwatchImage: swatchImageSlot,
+  },
+})(container));

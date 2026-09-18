@@ -45,6 +45,41 @@ export const checkMoneyOrder = {
   code: 'checkmo',
 };
 
+export const adyenCreditCard = {
+  name: 'Credit Card',
+  code: 'adyen_scheme',
+};
+
+export const adyenBancontact = {
+  name: 'Bancontact',
+  code: 'adyen_bancontact',
+};
+
+export const adyenIdeal = {
+  name: 'iDEAL',
+  code: 'adyen_ideal',
+};
+
+export const adyenKlarna = {
+  name: 'Klarna',
+  code: 'adyen_klarna',
+};
+
+export const adyenPaypal = {
+  name: 'PayPal',
+  code: 'adyen_paypal',
+};
+
+export const adyenGooglepay = {
+  name: 'Google Pay',
+  code: 'adyen_googlepay',
+};
+
+export const adyenApplepay = {
+  name: 'Apple Pay',
+  code: 'adyen_applepay',
+};
+
 export const products = {
   configurable: {
     urlPath: "/products/cypress-configurable-product-latest/cypress456",

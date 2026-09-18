@@ -80,7 +80,7 @@ export default async function renderSellerAssistedBuyingBanner() {
       // Redirect to home page after logout
       window.location.href = rootLink('/');
     } catch (error) {
-      console.error('Error closing seller assisted buying session:', error);
+      console.debug('Error closing seller assisted buying session:', error);
       closeButton.disabled = false;
       closeButton.textContent = 'Close Session';
     }

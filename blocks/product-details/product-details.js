@@ -31,7 +31,9 @@ import {
   setJsonLd,
   fetchPlaceholders,
   getProductLink,
+  getProductSku,
 } from '../../scripts/commerce.js';
+import { loadCSS } from '../../scripts/aem.js';
 
 // Initializers
 import { IMAGES_SIZES } from '../../scripts/initializers/pdp.js';
@@ -117,14 +119,17 @@ export default async function decorate(block) {
           <div class="product-details__buttons">
             <div class="product-details__buttons__add-to-cart"></div>
             <div class="product-details__buttons__add-to-wishlist"></div>
+           </div>
+         </div>
+         <div class="product-details__express-checkout">
+            <div class="product-details__express-checkout-divider"><span>or</span></div>
+            <div class="product-details__express-checkout-buttons"></div>
           </div>
-          <div class="product-details__add-to-cart-status" role="status" aria-live="polite"></div>
-        </div>
-        <div class="product-details__description"></div>
-        <div class="product-details__attributes"></div>
-      </div>
-    </div>
-  `);
+         <div class="product-details__description"></div>
+         <div class="product-details__attributes"></div>
+       </div>
+     </div>
+   `);
 
   const $alert = fragment.querySelector('.product-details__alert');
   const $gallery = fragment.querySelector('.product-details__gallery');
@@ -137,10 +142,12 @@ export default async function decorate(block) {
   const $giftCardOptions = fragment.querySelector('.product-details__gift-card-options');
   const $addToCart = fragment.querySelector('.product-details__buttons__add-to-cart');
   const $wishlistToggleBtn = fragment.querySelector('.product-details__buttons__add-to-wishlist');
-  // Kept mounted at all times so the "Adding to Cart" status is reliably
-  // announced instead of relying on the button's text/disabled state
-  // changing, which isn't announced by screen readers on its own.
-  const $addToCartStatus = fragment.querySelector('.product-details__add-to-cart-status');
+  const $expressCheckout = fragment.querySelector(
+    '.product-details__express-checkout',
+  );
+  const $expressButtons = fragment.querySelector(
+    '.product-details__express-checkout-buttons',
+  );
   const $description = fragment.querySelector('.product-details__description');
   const $attributes = fragment.querySelector('.product-details__attributes');
 
@@ -168,6 +175,14 @@ export default async function decorate(block) {
   // Alert
   let inlineAlert = null;
   const routeToWishlist = rootLink('/wishlist');
+
+  // WishlistToggle requires topLevelSku to always be a non-null string.
+  // For simple products the Catalog Service omits it (null/undefined); for
+  // configurable variants it is the parent SKU. Fall back to sku so the
+  // component never receives null and crashes the entire Promise.all on Safari.
+  const wishlistProduct = product
+    ? { ...product, topLevelSku: product.topLevelSku ?? product.sku }
+    : null;
 
   const [
     _galleryMobile,
@@ -249,9 +264,29 @@ export default async function decorate(block) {
     })($attributes),
 
     // Wishlist button - WishlistToggle Container
-    wishlistRender.render(WishlistToggle, {
-      product,
-    })($wishlistToggleBtn),
+    (async () => {
+      let wishlistTogglePromise = Promise.resolve(undefined);
+      if (wishlistProduct) {
+        try {
+          wishlistTogglePromise = wishlistRender
+            .render(WishlistToggle, { product: wishlistProduct })(
+              $wishlistToggleBtn,
+            )
+            .catch((e) => {
+              console.warn(
+                '[product-details] WishlistToggle async render failed, skipping:',
+                e,
+              );
+            });
+        } catch (e) {
+          console.warn(
+            '[product-details] WishlistToggle render failed, skipping:',
+            e,
+          );
+        }
+      }
+      return wishlistTogglePromise;
+    })(),
   ]);
 
   // Configuration – Button - Add to Cart
@@ -268,7 +303,6 @@ export default async function decorate(block) {
           children: buttonActionText,
           disabled: true,
         }));
-        $addToCartStatus.textContent = buttonActionText ?? 'Adding to Cart';
 
         // get the current selection values
         const values = pdpApi.getProductConfigurationValues();
@@ -337,7 +371,6 @@ export default async function decorate(block) {
           ...prev,
           disabled: isOutOfStock,
         }));
-        $addToCartStatus.textContent = '';
       }
     },
   })($addToCart);
@@ -413,14 +446,109 @@ export default async function decorate(block) {
   );
 
   // Set JSON-LD and Meta Tags
+  // Wrapped in try-catch to prevent errors if prices aren't loaded yet
   events.on('aem/lcp', () => {
     const isPrerendered = isProductPrerendered();
     if (product && !isPrerendered) {
-      setJsonLdProduct(product);
-      setMetaTags(product);
-      document.title = product.name;
+      try {
+        setJsonLdProduct(product);
+        setMetaTags(product);
+        document.title = product.name;
+      } catch (error) {
+        console.debug('[product-details] Error setting meta tags during aem/lcp:', error);
+      }
     }
   }, { eager: true });
+
+  // ── Express Checkout ──
+  // Load wallet buttons below the Add-to-Cart / wishlist buttons.
+  // The SKU is set as data-sku on each block element so the express blocks
+  // know to add the product to the cart before starting the wallet flow.
+  // Failures are isolated — a missing wallet (e.g. Apple Pay on non-Safari)
+  // never breaks the rest of the PDP.
+  const pdpSku = product?.sku || getProductSku();
+  if (pdpSku) {
+    const expressBlockNames = [
+      'adyen-payment-applepay-express',
+      'adyen-payment-googlepay-express',
+      'adyen-payment-paypal-express',
+    ];
+
+    // Show a loading skeleton while the express blocks initialise (network calls,
+    // SDK load, isAvailable checks). Removed after Promise.allSettled resolves.
+    const expressSkeletonItems = expressBlockNames.length;
+    const expressSkeleton = document.createElement('div');
+    expressSkeleton.className = 'express-checkout-skeleton';
+    for (let i = 0; i < expressSkeletonItems; i += 1) {
+      const item = document.createElement('div');
+      item.className = 'express-checkout-skeleton__item';
+      expressSkeleton.appendChild(item);
+    }
+    $expressButtons.appendChild(expressSkeleton);
+
+    // Kick off all express block initialisations. Each decorate() returns a
+    // Promise that resolves once isAvailable() has settled (button mounted or
+    // block hidden). We do NOT await here — product-details.js must return
+    // immediately so AEM's loadSection pipeline is not blocked and first paint
+    // is not delayed.
+    const expressPromises = expressBlockNames.map(async (blockName) => {
+      try {
+        // Load the block's CSS and JS in parallel. AEM's loadBlock is not called
+        // for dynamically-imported blocks so we must load their CSS explicitly —
+        // without this, block-specific styles (e.g. the Google Pay click loader)
+        // are never injected and remain invisible.
+        const cssPath = `${window.hlx.codeBasePath}/blocks/${blockName}/${blockName}.css`;
+        const [{ default: decorateExpressBlock }] = await Promise.all([
+          import(`../${blockName}/${blockName}.js`),
+          loadCSS(cssPath),
+        ]);
+        const blockEl = document.createElement('div');
+        blockEl.className = `block ${blockName}`;
+        blockEl.dataset.blockName = blockName;
+        blockEl.dataset.sku = pdpSku;
+        $expressButtons.appendChild(blockEl);
+        // Await inside this async map callback so the individual promise
+        // resolves only after isAvailable() settles — Promise.allSettled
+        // below uses these per-block promises to know when to drop the skeleton.
+        await decorateExpressBlock(blockEl);
+      } catch (err) {
+        console.debug(
+          `[product-details] Failed to load express block ${blockName}:`,
+          err,
+        );
+      }
+    });
+
+    // Remove skeleton and wire the visibility observer once all blocks settle.
+    // This runs in the background — product-details.js returns before it fires.
+    Promise.allSettled(expressPromises).then(() => {
+      expressSkeleton.remove();
+
+      if ($expressButtons.children.length) {
+        // Watch for all wallet buttons becoming unavailable (each sets display:none
+        // asynchronously after its isAvailable() check). Hide the entire express
+        // section (including the "or" divider) only when all children are hidden.
+        const observer = new MutationObserver(() => {
+          const allHidden = Array.from($expressButtons.children).every(
+            (child) => child.style.display === 'none',
+          );
+          if (allHidden) {
+            $expressCheckout.style.display = 'none';
+            observer.disconnect();
+          }
+        });
+        observer.observe($expressButtons, {
+          attributes: true,
+          subtree: true,
+          attributeFilter: ['style'],
+        });
+      } else {
+        $expressCheckout.style.display = 'none';
+      }
+    });
+  } else {
+    $expressCheckout.style.display = 'none';
+  }
 
   return Promise.resolve();
 }
@@ -486,20 +614,15 @@ async function setJsonLdProduct(product) {
   };
 
   if (variants.length > 1) {
-    ldJson.offers.push(...variants
-      // A variant can come back without a resolved product (e.g. an
-      // unavailable option combination); skip those so JSON-LD generation
-      // doesn't throw on null property access.
-      .filter((variant) => variant.product)
-      .map((variant) => ({
-        '@type': 'Offer',
-        name: variant.product.name,
-        image: variant.product.images?.[0]?.url,
-        price: variant.product.price?.final?.amount?.value,
-        priceCurrency: variant.product.price?.final?.amount?.currency,
-        availability: variant.product.inStock ? 'http://schema.org/InStock' : 'http://schema.org/OutOfStock',
-        sku: variant.product.sku,
-      })));
+    ldJson.offers.push(...variants.map((variant) => ({
+      '@type': 'Offer',
+      name: variant.product.name,
+      image: variant.product.images[0]?.url,
+      price: variant.product.price.final.amount.value,
+      priceCurrency: variant.product.price.final.amount.currency,
+      availability: variant.product.inStock ? 'http://schema.org/InStock' : 'http://schema.org/OutOfStock',
+      sku: variant.product.sku,
+    })));
   } else {
     ldJson.offers.push({
       '@type': 'Offer',
@@ -540,7 +663,20 @@ function setMetaTags(product) {
     return;
   }
 
+  // Defensive checks for null prices object
+  // In some scenarios (e.g., fast aem/lcp event), prices may not be fully loaded
+  if (!product.prices?.final) {
+    console.debug('[product-details] setMetaTags: prices.final not available, skipping price meta tags');
+    return;
+  }
+
   const price = product.prices.final.minimumAmount ?? product.prices.final.amount;
+
+  // Ensure price exists before accessing its properties
+  if (!price) {
+    console.debug('[product-details] setMetaTags: price amount not available, skipping price meta tags');
+    return;
+  }
 
   createMetaTag('title', product.metaTitle || product.name, 'name');
   createMetaTag('description', product.metaDescription, 'name');

@@ -82,7 +82,7 @@ export default async function decorate(block) {
         ...userFilters,
       ],
     }).catch(() => {
-      console.error('Error searching for products');
+      console.debug('Error searching for products');
     });
   } else {
     // Search page: dropin uses only the request (no URL parsing).
@@ -94,21 +94,14 @@ export default async function decorate(block) {
       // Always add visibility filter to the request
       filter: [visibilityFilter, ...userFilters],
     }).catch((e) => {
-      console.error('Error searching for products', e);
+      console.debug('Error searching for products', e);
     });
   }
 
-  const requiresPdpConfiguration = (product) => product.typename === 'ComplexProductView'
-    || product.attributes?.some((attr) => attr.name === 'ac_giftcard');
-
   const getAddToCartButton = (product) => {
-    const productName = product.name || product.sku;
-    const addToCartLabel = `${labels.Global?.AddProductToCart} ${productName}`;
-
-    if (requiresPdpConfiguration(product)) {
+    if (product.typename === 'ComplexProductView') {
       const button = document.createElement('div');
       UI.render(Button, {
-        'aria-label': addToCartLabel,
         children: labels.Global?.AddProductToCart,
         icon: Icon({ source: 'Cart' }),
         href: getProductLink(product.urlKey, product.sku),
@@ -118,7 +111,6 @@ export default async function decorate(block) {
     }
     const button = document.createElement('div');
     UI.render(Button, {
-      'aria-label': addToCartLabel,
       children: labels.Global?.AddProductToCart,
       icon: Icon({ source: 'Cart' }),
       onClick: () => cartApi.addProductsToCart([{ sku: product.sku, quantity: 1 }]),
@@ -160,7 +152,6 @@ export default async function decorate(block) {
           const { product, defaultImageProps } = ctx;
           const anchorWrapper = document.createElement('a');
           anchorWrapper.href = getProductLink(product.urlKey, product.sku);
-          anchorWrapper.setAttribute('aria-label', product.name || product.sku);
 
           tryRenderAemAssetsImage(ctx, {
             alias: product.sku,

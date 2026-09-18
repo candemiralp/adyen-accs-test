@@ -5,6 +5,7 @@ import { initializers } from '@dropins/tools/initializer.js';
 import { isAemAssetsEnabled } from '@dropins/tools/lib/aem/assets.js';
 import { getConfigValue, getRootPath } from '@dropins/tools/lib/aem/configs.js';
 import { CORE_FETCH_GRAPHQL, CS_FETCH_GRAPHQL, fetchPlaceholders } from '../commerce.js';
+import { importWithRetry } from '../retry-fetch.js';
 
 const DROPIN_WEBSITE_COOKIE = 'dropin_website_path';
 const getWebsitePath = () => getRootPath() || '/';
@@ -88,8 +89,10 @@ export default async function initializeDropins() {
     // set auth headers
     setAuthHeaders(!!token);
 
-    // Event Bus Logger
-    events.enableLogger(true);
+    // Event Bus Logger — dev only to avoid console noise in production
+    if (window.location.hostname === 'localhost' || window.location.hostname.includes('.hlx.')) {
+      events.enableLogger(true);
+    }
 
     // Set up AEM Assets image parameter conversion
     setupAemAssetsImageParams();
@@ -97,21 +100,37 @@ export default async function initializeDropins() {
     // Fetch global placeholders
     await fetchPlaceholders('placeholders/global.json');
 
-    // Initialize Global Drop-ins
-    await import('./auth.js');
+    // Initialize Global Drop-ins — sequential to prevent rate-limiting spikes
+    // Note: While these could run in parallel, sequential init prevents 429 cascades
+    // on preview/production environments with strict rate limits. The performance
+    // trade-off is minimal (~100ms) and prevents request timeouts.
+    const rootPath = getRootPath() || '/';
+    const initializersPath = `${rootPath}${rootPath.endsWith('/') ? '' : '/'}scripts/initializers`;
 
-    await import('./personalization.js');
+    // Auth first (needed for all authenticated dropins)
+    await importWithRetry(`${initializersPath}/auth.js`);
 
-    import('./cart.js');
+    // Personalization second (independent, can follow auth)
+    await importWithRetry(`${initializersPath}/personalization.js`);
+
+    // Cart dropin is needed on all pages because the header mini-cart badge
+    // (item count) depends on the cart/data event which only fires once the
+    // cart dropin has initialized. Skipping it on CMS pages would mean the
+    // counter never appears for users browsing the homepage etc. with items
+    // already in their cart.
+    importWithRetry(`${initializersPath}/cart.js`);
 
     events.on('aem/lcp', async () => {
       // Recaptcha
       await import('@dropins/tools/recaptcha.js').then((recaptcha) => {
         recaptcha.setEndpoint(CORE_FETCH_GRAPHQL);
-        recaptcha.enableLogger(true);
+        // Recaptcha logger — dev only
+        if (window.location.hostname === 'localhost' || window.location.hostname.includes('.hlx.')) {
+          recaptcha.enableLogger(true);
+        }
         return recaptcha.setConfig();
       });
-    }, { eager: true });
+    });
   };
 
   // re-initialize on prerendering changes

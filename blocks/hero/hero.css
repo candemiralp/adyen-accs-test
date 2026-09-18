@@ -9,11 +9,28 @@
   min-height: 300px;
 }
 
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 40%);
+  z-index: 0;
+}
+
+.hero > * {
+  position: relative;
+  z-index: 1;
+}
+
 .hero h1 {
   max-width: 1200px;
   margin-left: auto;
   margin-right: auto;
-  color: var(--background-color);
+  color: white;
+}
+
+.hero p {
+  color: white;
 }
 
 .hero picture {

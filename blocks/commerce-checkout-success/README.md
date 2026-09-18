@@ -48,10 +48,27 @@ await renderCheckoutSuccess(container, { orderData });
 
 - Scrolls to top on load for proper confirmation visibility.
 - Loads `commerce-checkout-success.css` styles.
+- Removes the checkout page loader from the DOM once the success page has completed rendering.
 - Fetches localized placeholders and mounts the Order drop-in initializer with `langDefinitions` and optional `orderData`.
 - Renders order confirmation sections (header, status, shipping status, customer details, cost summary, product list, gift options).
+- Attempts to render the donation component (optional, via slot in `renderCheckoutSuccessContent()`). If rendering fails, logs the error but does not block page display.
+- Adds payment-method-specific notices for ACH Direct Debit (3–5 business day settlement) and SEPA Direct Debit (asynchronous settlement).
 - Footer includes a "Continue shopping" button and a "Contact us" support link (from `SUPPORT_PATH`).
 - Product list integrates read-only Gift Options per item; product and swatch images attempt to use AEM Assets via SKU/label aliasing.
+
+### Loader Removal (Guest Checkout)
+
+**Problem**: After order placement in guest checkout, the success page would render but the checkout page loader (from `commerce-checkout` block) remained visible, blocking view of the order confirmation content.
+
+**Solution**: Remove the loader from the DOM after `renderCheckoutSuccessContent()` completes, rather than attempting to restore or hide it. This ensures the success page content is immediately visible without overlay.
+
+**Implementation**:
+- At end of `decorate()`, after fragment is rendered into the block container, query for the loader element (`[data-is-loading="true"]`)
+- If found, call `element.remove()` to remove it from the DOM entirely
+- This is a one-way operation — the loader is not needed after the success page is displayed
+
+**Related Code**:
+- `decorate()` function (lines ~1100-1160) performs loader removal after all content is rendered
 
 ## DOM Structure
 

@@ -66,7 +66,7 @@ export default async function decorate(block) {
       fragmentStoreView = await loadFragment(storeSwitcherPath);
       if (!fragmentStoreView) throw new Error(`Footer does not render due to Store Switcher fragment (${storeSwitcherPath}) not found`);
     } catch (error) {
-      console.error('Error loading store switcher fragment:', error);
+      console.debug('Error loading store switcher fragment:', error);
       return;
     }
 
@@ -169,4 +169,15 @@ export default async function decorate(block) {
   while (fragment.firstElementChild) footer.append(fragment.firstElementChild);
 
   block.append(footer);
+
+  // Demo notice banner for staging/localhost
+  const currentUrl = window.location.href;
+  const demoShow = ['localhost', 'staging'];
+  if (demoShow.some((demo) => currentUrl.includes(demo))) {
+    const demoNotice = document.createRange().createContextualFragment(`<div class="demo-notice">
+      <p>This is a demo site, sales are not final.</p>
+    </div>`).firstElementChild;
+    document.body.classList.add('demo-notice-sticky');
+    document.body.append(demoNotice);
+  }
 }

@@ -26,7 +26,26 @@ export default async function decorate(block) {
         throw new Error('No product list page block found');
       }
 
-      const category = plpBlock.dataset?.urlpath || readBlockConfig(plpBlock).urlpath;
+      // The PLP block sets dataset.urlpath after decorating; if enrichment runs first,
+      // read from block config directly. If neither is available yet, wait for PLP to
+      // finish decorating and set dataset.urlpath.
+      let category = readBlockConfig(plpBlock).urlpath || plpBlock.dataset?.urlpath;
+      if (!category) {
+        category = await new Promise((resolve) => {
+          const observer = new MutationObserver(() => {
+            if (plpBlock.dataset?.urlpath) {
+              observer.disconnect();
+              resolve(plpBlock.dataset.urlpath);
+            }
+          });
+          observer.observe(plpBlock, { attributes: true, attributeFilter: ['data-urlpath'] });
+          // Resolve immediately if urlpath is set before observer fires
+          if (plpBlock.dataset?.urlpath) {
+            observer.disconnect();
+            resolve(plpBlock.dataset.urlpath);
+          }
+        });
+      }
       if (!category) {
         throw new Error('No category ID found in product list page block');
       }
@@ -40,7 +59,16 @@ export default async function decorate(block) {
     const index = await fetchIndex('enrichment/enrichment');
     const matchingFragments = index.data
       .filter((fragment) => Object.keys(filters).every((filterKey) => {
-        const values = JSON.parse(fragment[filterKey]);
+        const raw = fragment[filterKey];
+        if (!raw) return false;
+        let values;
+        try {
+          values = JSON.parse(raw);
+        } catch {
+          // Plain string value (e.g. "auto-parts") — treat as single-element array
+          values = [raw.trim()];
+        }
+        if (!Array.isArray(values)) values = [values];
         return values.includes(filters[filterKey]);
       }))
       .map((fragment) => fragment.path);
