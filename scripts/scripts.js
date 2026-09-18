@@ -1,8 +1,6 @@
 import {
-  buildBlock,
   loadHeader,
   loadFooter,
-  decorateButtons,
   decorateIcons,
   decorateBlocks,
   decorateTemplateAndTheme,
@@ -10,12 +8,12 @@ import {
   loadSection,
   loadSections,
   loadCSS,
+  buildBlock,
 } from './aem.js';
 import {
   loadCommerceEager,
   loadCommerceLazy,
   initializeCommerce,
-  startDropinInitialization,
   applyTemplates,
   decorateLinks,
   loadErrorPage,
@@ -24,38 +22,94 @@ import {
   IS_DA,
 } from './commerce.js';
 
-/**
- * Builds hero block and prepends to main in a new section.
- * @param {Element} main The container element
+/*
+ * Trusted Types default policy.
+ *
+ * This policy is defined but NOT currently enforced: the
+ * `require-trusted-types-for 'script'` CSP directive that activates it has been
+ * removed from the Content-Security-Policy meta in head.html. The policy is kept
+ * here so enforcement can be turned back on without re-authoring it.
+ *
+ * Why the directive was removed: with it enforced, payment SDKs that build a
+ * same-origin iframe and synchronously inject a <script> into it fail to render.
+ * The Credit Card checkout flow hits this because its hosted-fields SDK does
+ * exactly that. Trusted Types policies are scoped per document/realm, so the
+ * child iframe inherits the CSP directive but not this default policy; the SDK's
+ * `script.src` assignment in that realm then throws "This document requires
+ * 'TrustedScriptURL' assignment" and the card fields never mount. Any dependency
+ * that injects scripts into a same-origin iframe realm hits the same wall.
+ *
+ * To re-enable enforcement: add `require-trusted-types-for 'script';` back to the
+ * `Content-Security-Policy` meta in head.html. Before doing so, note that the
+ * policy below is a passthrough (createScriptURL/createScript return their input
+ * unchanged), so enforcing it satisfies the API without adding real containment;
+ * hardening it into an allowlist is the useful next step. Enforcement will also
+ * re-break any same-origin-iframe SDK unless that SDK installs its own policy in
+ * the iframe realm (the correct long-term fix).
+ *
+ * References:
+ * - Directive introduced upstream: https://github.com/adobe/aem-boilerplate/pull/641
+ * - Trusted Types API: https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API
  */
-function buildHeroBlock(main) {
-  const h1 = main.querySelector('h1');
-  const picture = main.querySelector('picture');
-  // eslint-disable-next-line no-bitwise
-  if (h1 && picture && (h1.compareDocumentPosition(picture) & Node.DOCUMENT_POSITION_PRECEDING)) {
-    // Check if h1 or picture is already inside a hero block
-    if (h1.closest('.hero') || picture.closest('.hero')) {
-      return; // Don't create a duplicate hero block
-    }
-    const section = document.createElement('div');
-    section.append(buildBlock('hero', { elems: [picture, h1] }));
-    main.prepend(section);
-  }
+if (window.trustedTypes && window.trustedTypes.createPolicy) {
+  const innerTT = window.trustedTypes.createPolicy('tt-inner', {
+    createHTML: (s) => s, // avoid stack overflow
+  });
+
+  window.trustedTypes.createPolicy('default', {
+    createHTML: (input, type, sink) => {
+      let processedInput = input;
+      if (/srcdoc\s*=/i.test(processedInput)) {
+        const doc = new DOMParser().parseFromString(innerTT.createHTML(processedInput), 'text/html');
+        doc.querySelectorAll('iframe[srcdoc]').forEach((el) => el.removeAttribute('srcdoc'));
+        processedInput = doc.body.innerHTML;
+      }
+      if (sink.includes('createContextualFragment') || sink.includes('Document write')) {
+        const doc = new DOMParser().parseFromString(innerTT.createHTML(processedInput), 'text/html');
+        doc.querySelectorAll('script').forEach((el) => el.remove());
+        processedInput = doc.body.innerHTML;
+      }
+      return processedInput;
+    },
+    createScriptURL: (input) => input,
+    createScript: (input) => input,
+  });
 }
 
 /**
  * load fonts.css and set a session storage flag
  */
 async function loadFonts() {
-  // Guard against double-invocation (called in both loadEager and loadLazy)
-  if (loadFonts.called) return;
-  loadFonts.called = true;
   await loadCSS(`${window.hlx.codeBasePath}/styles/fonts.css`);
   try {
     if (!window.location.hostname.includes('localhost')) sessionStorage.setItem('fonts-loaded', 'true');
   } catch (e) {
     // do nothing
   }
+}
+
+/**
+ * Turns `/widgets/...` links into widget blocks.
+ * @param {Element} main The container element
+ */
+function buildWidgetAutoBlocks(main) {
+  const widgetLinks = [...main.querySelectorAll('a[href*="/widgets/"]')];
+  widgetLinks.forEach((link) => {
+    if (link.closest('.widget')) return;
+    const newLink = link.cloneNode(true);
+    const widgetBlock = buildBlock('widget', { elems: [newLink] });
+    const p = link.closest('p');
+    if (
+      p
+      && p.querySelectorAll('a').length === 1
+      && p.querySelector('a') === link
+      && p.textContent.trim() === link.textContent.trim()
+    ) {
+      p.replaceWith(widgetBlock);
+    } else {
+      link.replaceWith(widgetBlock);
+    }
+  });
 }
 
 /**
@@ -81,11 +135,49 @@ function buildAutoBlocks(main) {
         });
       });
     }
-
-    if (!main.querySelector('.hero')) buildHeroBlock(main);
+    buildWidgetAutoBlocks(main);
   } catch (error) {
     console.error('Auto Blocking failed', error);
   }
+}
+
+/**
+ * Decorates formatted links to style them as buttons.
+ * @param {HTMLElement} main The main container element
+ */
+function decorateButtons(main) {
+  main.querySelectorAll('p a[href]').forEach((a) => {
+    a.title = a.title || a.textContent;
+    const p = a.closest('p');
+    const text = a.textContent.trim();
+
+    // quick structural checks
+    if (a.querySelector('img') || p.textContent.trim() !== text) return;
+
+    // skip URL display links
+    try {
+      if (new URL(a.href).href === new URL(text, window.location).href) return;
+    } catch { /* continue */ }
+
+    // require authored formatting for buttonization
+    const strong = a.closest('strong');
+    const em = a.closest('em');
+    if (!strong && !em) return;
+
+    p.className = 'button-wrapper';
+    a.className = 'button';
+    if (strong && em) { // high-impact call-to-action
+      a.classList.add('accent');
+      const outer = strong.contains(em) ? strong : em;
+      outer.replaceWith(a);
+    } else if (strong) {
+      a.classList.add('primary');
+      strong.replaceWith(a);
+    } else {
+      a.classList.add('secondary');
+      em.replaceWith(a);
+    }
+  });
 }
 
 /**
@@ -94,11 +186,11 @@ function buildAutoBlocks(main) {
  */
 export function decorateMain(main) {
   decorateLinks(main);
-  decorateButtons(main);
   decorateIcons(main);
   buildAutoBlocks(main);
   decorateSections(main);
   decorateBlocks(main);
+  decorateButtons(main);
 }
 
 /**
@@ -115,10 +207,6 @@ async function loadEager(doc) {
       await initializeCommerce();
       decorateMain(main);
       applyTemplates(doc);
-      // Start dropin initialization after decorateMain so page-type detection
-      // (which depends on block class names set by decorateBlocks) is accurate.
-      // Fire-and-forget: it does not block LCP.
-      startDropinInitialization();
       await loadCommerceEager();
     } catch (e) {
       console.error('Error initializing commerce configuration:', e);
@@ -156,6 +244,7 @@ async function loadLazy(doc) {
 
   loadCommerceLazy();
 
+  loadCSS(`${window.hlx.codeBasePath}/styles/lazy-styles.css`);
   loadFonts();
 }
 
@@ -164,15 +253,8 @@ async function loadLazy(doc) {
  * without impacting the user experience.
  */
 function loadDelayed() {
-  // Use requestIdleCallback when available, so delayed work defers until the
-  // browser is genuinely idle rather than firing on a fixed 3-second timeout.
-  // Fall back to setTimeout for browsers that don't support requestIdleCallback.
-  const load = () => import('./delayed.js');
-  if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(load, { timeout: 3000 });
-  } else {
-    window.setTimeout(load, 3000);
-  }
+  window.setTimeout(() => import('./delayed.js'), 3000);
+  // load anything that can be postponed to the latest here
 }
 
 async function loadPage() {

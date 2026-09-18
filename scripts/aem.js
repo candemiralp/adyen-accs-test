@@ -11,8 +11,6 @@
  */
 
 /* eslint-env browser */
-import { importWithRetry, loadCSSWithRetry } from './retry-fetch.js';
-
 function sampleRUM(checkpoint, data) {
   // eslint-disable-next-line max-len
   const timeShift = () => (window.performance ? window.performance.now() : Date.now() - window.hlx.rum.firstReadTime);
@@ -126,7 +124,9 @@ function sampleRUM(checkpoint, data) {
 
         sampleRUM.enhance = () => {
           // only enhance once
-          if (document.querySelector('script[src*="rum-enhancer"]')) return;
+          if (document.querySelector('script[src*="rum-enhancer"]')) {
+            return;
+          }
           const { enhancerVersion, enhancerHash } = sampleRUM.enhancerContext || {};
           const script = document.createElement('script');
           if (enhancerHash) {
@@ -169,7 +169,7 @@ function setup() {
       [window.hlx.codeBasePath] = new URL(scriptEl.src).pathname.split('/scripts/scripts.js');
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.debug(error);
+      console.log(error);
     }
   }
 }
@@ -253,31 +253,22 @@ function readBlockConfig(block) {
 }
 
 /**
- * Loads a CSS file with deferred retry logic (non-blocking).
- * CSS loads immediately but doesn't block; retries happen in background.
+ * Loads a CSS file.
  * @param {string} href URL to the CSS file
  */
 async function loadCSS(href) {
-  // Load CSS immediately via link tag (browser will handle in parallel)
-  // Don't wait for it, let browser load asynchronously
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = href;
-
-  // Attach retry handler only if this is first load attempt
-  link.onerror = () => {
-    // Only retry on error - successful loads don't need retry logic
-    // Defer retry to background (don't block main thread)
-    setTimeout(() => {
-      loadCSSWithRetry(href).catch(() => {
-        // Silently fail - CSS errors are non-critical
-      });
-    }, 0);
-  };
-
-  document.head.append(link);
-  // Return immediately - don't wait for CSS
-  return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    if (!document.querySelector(`head > link[href="${href}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = href;
+      link.onload = resolve;
+      link.onerror = reject;
+      document.head.append(link);
+    } else {
+      resolve();
+    }
+  });
 }
 
 /**
@@ -466,44 +457,6 @@ function decorateIcons(element, prefix = '') {
 }
 
 /**
- * Decorates paragraphs containing a single link as buttons.
- * @param {Element} element container element
- */
-function decorateButtons(element) {
-  element.querySelectorAll('a').forEach((a) => {
-    a.title = a.title || a.textContent;
-    if (a.href !== a.textContent) {
-      const up = a.parentElement;
-      const twoup = a.parentElement.parentElement;
-      if (!a.querySelector('img')) {
-        if (up.childNodes.length === 1 && (up.tagName === 'P' || up.tagName === 'DIV')) {
-          a.className = 'button'; // default
-          up.classList.add('button-container');
-        }
-        if (
-          up.childNodes.length === 1
-          && up.tagName === 'STRONG'
-          && twoup.childNodes.length === 1
-          && twoup.tagName === 'P'
-        ) {
-          a.className = 'button primary';
-          twoup.classList.add('button-container');
-        }
-        if (
-          up.childNodes.length === 1
-          && up.tagName === 'EM'
-          && twoup.childNodes.length === 1
-          && twoup.tagName === 'P'
-        ) {
-          a.className = 'button secondary';
-          twoup.classList.add('button-container');
-        }
-      }
-    }
-  });
-}
-
-/**
  * Decorates all sections in a container element.
  * @param {Element} main The container element
  */
@@ -524,24 +477,6 @@ function decorateSections(main) {
     section.classList.add('section');
     section.dataset.sectionStatus = 'initialized';
     section.style.display = 'none';
-
-    // Process section metadata
-    const sectionMeta = section.querySelector('div.section-metadata');
-    if (sectionMeta) {
-      const meta = readBlockConfig(sectionMeta);
-      Object.keys(meta).forEach((key) => {
-        if (key === 'style') {
-          const styles = meta.style
-            .split(',')
-            .filter((style) => style)
-            .map((style) => toClassName(style.trim()));
-          styles.forEach((style) => section.classList.add(style));
-        } else {
-          section.dataset[toCamelCase(key)] = meta[key];
-        }
-      });
-      sectionMeta.parentNode.remove();
-    }
   });
 }
 
@@ -590,8 +525,8 @@ async function loadBlock(block) {
       const decorationComplete = new Promise((resolve) => {
         (async () => {
           try {
-            const mod = await importWithRetry(
-              `${window.hlx.codeBasePath}/blocks/${blockName}/${blockName}.js`,
+            const mod = await import(
+              `${window.hlx.codeBasePath}/blocks/${blockName}/${blockName}.js`
             );
             if (mod.default) {
               await mod.default(block);
@@ -723,7 +658,6 @@ export {
   createOptimizedPicture,
   decorateBlock,
   decorateBlocks,
-  decorateButtons,
   decorateIcons,
   decorateSections,
   decorateTemplateAndTheme,

@@ -11,15 +11,13 @@ import { FetchGraphQL } from '@dropins/tools/fetch-graphql.js';
 import {
   getMetadata,
   readBlockConfig,
-  toCamelCase,
-  toClassName,
 } from './aem.js';
 import initializeDropins from './initializers/index.js';
 
 /**
  * Sanitizes the given string by:
  * - convert to lower case
- * - normalize all Unicode characters
+ * - normalize all unicode characters
  * - replace all non-alphanumeric characters with a dash
  * - remove all consecutive dashes
  * - remove all leading and trailing dashes
@@ -51,16 +49,16 @@ export const CS_FETCH_GRAPHQL = new FetchGraphQL();
  */
 
 // Environment checks
-export const IS_UE = typeof window !== 'undefined' && window.location.hostname.includes('ue.da.live');
-export const IS_DA = typeof window !== 'undefined' && new URL(window.location.href).searchParams.has(
-  'dapreview',
-);
+export const IS_UE = window.location.hostname.includes('ue.da.live');
+export const IS_DA = new URL(window.location.href).searchParams.has('dapreview');
 
 /**
  * Product template paths - pages that are templates and should use
- * default/fake SKUs. Should be relative to the root path, i.e. "/", "/fr/", etc.
+ * default/fake SKUs. Should be relative to root path, ie "/" , "/fr/" , etc.
  */
-export const PRODUCT_TEMPLATE_PATHS = ['products/default'];
+export const PRODUCT_TEMPLATE_PATHS = [
+  'products/default',
+];
 
 // PATHS
 export const SUPPORT_PATH = '/support';
@@ -126,25 +124,11 @@ export const authPrivacyPolicyConsentSlot = {
  * @param {string} as - The type of resource being preloaded
  */
 export function preloadFile(href, as) {
-  // Validate href before creating preload link to avoid SSL/protocol errors
-  if (!href || typeof href !== 'string' || !href.trim()) {
-    console.warn(`[commerce.preloadFile] Skipping preload: empty href (as="${as}")`);
-    return;
-  }
-
   const link = document.createElement('link');
   link.rel = 'preload';
   link.as = as;
-  // Only scripts require crossOrigin — images loaded via <img> do not use CORS
-  // and setting crossorigin on a preload for a non-CORS origin causes a blocked request
-  if (as === 'script') link.crossOrigin = 'anonymous';
+  link.crossOrigin = 'anonymous';
   link.href = href;
-
-  // Add error listener to catch SSL/protocol issues gracefully
-  link.onerror = () => {
-    console.warn(`[commerce.preloadFile] Failed to preload ${as}: ${href}`);
-  };
-
   document.head.appendChild(link);
 }
 
@@ -170,17 +154,11 @@ function notifyUI(event) {
 function detectPageType() {
   if (document.body.querySelector('main .product-details')) {
     return 'Product';
-  }
-  if (document.body.querySelector('main .product-list-page')) {
+  } if (document.body.querySelector('main .product-list-page')) {
     return 'Category';
-  }
-  if (document.body.querySelector('main .commerce-cart')) {
+  } if (document.body.querySelector('main .commerce-cart')) {
     return 'Cart';
-  }
-  if (
-    document.body.querySelector('main .commerce-checkout')
-    || document.body.querySelector('main .adyen-payment-redirection')
-  ) {
+  } if (document.body.querySelector('main .commerce-checkout')) {
     return 'Checkout';
   }
   return 'CMS';
@@ -192,12 +170,8 @@ function detectPageType() {
  */
 async function handleCommercePageType(pageType) {
   if (pageType === 'Product') {
-    // Fire-and-forget: pdp.js has a top-level await on fetchProductData which is
-    // a network call. Awaiting the import here blocks loadCommerceEager → loadEager
-    // → document.body.classList.add('appear'), delaying first paint by 1-2 seconds.
-    // The PDP dropin initializer queues itself via the initializers system; the PDP
-    // block's decorate() (loaded lazily) will wait for it via mountImmediately.
-    import('./initializers/pdp.js');
+    // initialize pdp
+    await import('./initializers/pdp.js');
   }
 }
 
@@ -239,18 +213,11 @@ function initializeAdobeDataLayer(pageType) {
  */
 export async function fetchIndex(indexFile, pageSize = 500) {
   const handleIndex = async (offset) => {
-    const resp = await fetch(
-      `/${indexFile}.json?limit=${pageSize}&offset=${offset}`,
-    );
-    if (!resp.ok) {
-      throw new Error(
-        `Failed to fetch index "${indexFile}": ${resp.status} ${resp.statusText}`,
-      );
-    }
+    const resp = await fetch(`/${indexFile}.json?limit=${pageSize}&offset=${offset}`);
     const json = await resp.json();
 
     const newIndex = {
-      complete: json.limit + json.offset === json.total,
+      complete: (json.limit + json.offset) === json.total,
       offset: json.offset + pageSize,
       promise: null,
       data: [...window.index[indexFile].data, ...json.data],
@@ -278,7 +245,7 @@ export async function fetchIndex(indexFile, pageSize = 500) {
   }
 
   window.index[indexFile].promise = handleIndex(window.index[indexFile].offset);
-  const newIndex = await window.index[indexFile].promise;
+  const newIndex = await (window.index[indexFile].promise);
   window.index[indexFile] = newIndex;
 
   return newIndex;
@@ -311,7 +278,10 @@ export function decorateLinks(main) {
     try {
       const url = new URL(a.href);
       const {
-        origin, pathname, search, hash,
+        origin,
+        pathname,
+        search,
+        hash,
       } = url;
 
       // Skip localization if #nolocal flag is present
@@ -321,14 +291,12 @@ export function decorateLinks(main) {
         return;
       }
 
-      // if the links belong to another store, do nothing
+      // if the links belongs to another store, do nothing
       if (roots.some((r) => r !== root && pathname.startsWith(r))) return;
 
       // If the link is already localized, do nothing
       if (origin !== window.location.origin || pathname.startsWith(root)) return;
-      a.href = new URL(
-        `${origin}${root}${pathname.replace(/^\//, '')}${search}${hash}`,
-      );
+      a.href = new URL(`${origin}${root}${pathname.replace(/^\//, '')}${search}${hash}`);
     } catch {
       console.warn('Could not make localized link');
     }
@@ -342,49 +310,29 @@ export async function loadCommerceLazy() {
   // Initialize modal functionality
   autolinkModals(document);
 
-  // Initialize Adobe Client Data Layer (skip if already initialized by event-collector)
-  if (!window.adobeDataLayer || !window.adobeDataLayer.version) {
-    await import('./acdl/adobe-client-data-layer.min.js');
-  }
+  // Initialize Adobe Client Data Layer
+  await import('./acdl/adobe-client-data-layer.min.js');
 
   // Track history
   trackHistory();
 }
 
 /**
- * Initializes commerce configuration (endpoints and config values only).
- * Does NOT start dropin initialization — call startDropinInitialization() for that.
- * This is intentionally fast, so it does not block LCP / decorateMain().
+ * Initializes commerce configuration
  */
 export async function initializeCommerce() {
   // Initialize Config
   initializeConfig(await getConfigFromSession());
 
   // Set Fetch GraphQL (Core)
-  CORE_FETCH_GRAPHQL.setEndpoint(
-    getConfigValue('commerce-core-endpoint')
-      || (await getConfigValue('commerce-endpoint')),
-  );
-  CORE_FETCH_GRAPHQL.setFetchGraphQlHeaders((prev) => ({
-    ...prev,
-    ...getHeaders('all'),
-  }));
+  CORE_FETCH_GRAPHQL.setEndpoint(getConfigValue('commerce-core-endpoint') || await getConfigValue('commerce-endpoint'));
+  CORE_FETCH_GRAPHQL.setFetchGraphQlHeaders((prev) => ({ ...prev, ...getHeaders('all') }));
 
   // Set Fetch GraphQL (Catalog Service)
   CS_FETCH_GRAPHQL.setEndpoint(await commerceEndpointWithQueryParams());
-  CS_FETCH_GRAPHQL.setFetchGraphQlHeaders((prev) => ({
-    ...prev,
-    ...getHeaders('cs'),
-  }));
-}
+  CS_FETCH_GRAPHQL.setFetchGraphQlHeaders((prev) => ({ ...prev, ...getHeaders('cs') }));
 
-/**
- * Starts dropin initialization (auth, cart, personalization, recaptcha).
- * Fire-and-forget: it does not block the caller.
- * Must be called after decorateMain() so detectPageType() returns the correct value.
- */
-export function startDropinInitialization() {
-  initializeDropins();
+  return initializeDropins();
 }
 
 /**
@@ -401,7 +349,7 @@ export function rootLink(link) {
 }
 
 /**
- * Decorates Column Template to the main element.
+ * Decorates Columns Template to the main element.
  * @param {Element} doc The document element
  */
 function buildTemplateColumns(doc) {
@@ -417,10 +365,7 @@ function buildTemplateColumns(doc) {
     }
 
     if (gap) {
-      column.style.setProperty(
-        '--gap',
-        `var(--spacing-${gap.toLocaleLowerCase()})`,
-      );
+      column.style.setProperty('--gap', `var(--spacing-${gap.toLocaleLowerCase()})`);
       column.removeAttribute('data-gap');
     }
   });
@@ -503,27 +448,24 @@ export async function fetchPlaceholders(path) {
       }
 
       // Create new fetch promise
-      const resourceFetchPromise = fetch(`${url}?sheet=data`)
-        .then(async (response) => {
-          if (response.ok) {
-            const data = await response.json();
-            // Cache the response
-            window.placeholders[resourceCacheKey] = data;
-            return data;
-          }
-          console.warn(
-            `Failed to fetch placeholders from ${url}: HTTP ${response.status} ${response.statusText}`,
-          );
-          return {};
-        })
-        .catch((error) => {
-          console.error(`Error fetching placeholders from ${url}:`, error);
-          return {};
-        })
-        .finally(() => {
-          // Remove from pending
-          delete window.placeholders._pending[resourceCacheKey];
-        });
+      // Use force-cache to serve any available cache entry without revalidation,
+      // reducing CDN traffic for static localization assets past their max-age.
+      const resourceFetchPromise = fetch(`${url}?sheet=data`, { cache: 'force-cache' }).then(async (response) => {
+        if (response.ok) {
+          const data = await response.json();
+          // Cache the response
+          window.placeholders[resourceCacheKey] = data;
+          return data;
+        }
+        console.warn(`Failed to fetch placeholders from ${url}: HTTP ${response.status} ${response.statusText}`);
+        return {};
+      }).catch((error) => {
+        console.error(`Error fetching placeholders from ${url}:`, error);
+        return {};
+      }).finally(() => {
+        // Remove from pending
+        delete window.placeholders._pending[resourceCacheKey];
+      });
 
       // Store pending promise
       window.placeholders._pending[resourceCacheKey] = resourceFetchPromise;
@@ -547,9 +489,7 @@ export async function fetchPlaceholders(path) {
         // Early return if no data
         const hasData = jsons.some((json) => json.data?.length > 0);
         if (!hasData) {
-          console.warn(
-            `No placeholder data found for path: ${path}${fallback ? ` and fallback: ${fallback}` : ''}`,
-          );
+          console.warn(`No placeholder data found for path: ${path}${fallback ? ` and fallback: ${fallback}` : ''}`);
           resolve({});
           return;
         }
@@ -570,14 +510,12 @@ export async function fetchPlaceholders(path) {
 
         // Early return if no valid data
         if (Object.keys(data).length === 0) {
-          console.warn(
-            `No valid placeholder data found after processing for path: ${path}${fallback ? ` and fallback: ${fallback}` : ''}`,
-          );
+          console.warn(`No valid placeholder data found after processing for path: ${path}${fallback ? ` and fallback: ${fallback}` : ''}`);
           resolve({});
           return;
         }
 
-        // Convert data object to placeholder object with nested structure
+        // Convert data object to placeholders object with nested structure
         const placeholders = {};
 
         Object.entries(data).forEach(([Key, Value]) => {
@@ -601,10 +539,7 @@ export async function fetchPlaceholders(path) {
         resolve(merged);
       })
       .catch((error) => {
-        console.error(
-          `Error loading placeholders for path: ${path}${fallback ? ` and fallback: ${fallback}` : ''}`,
-          error,
-        );
+        console.error(`Error loading placeholders for path: ${path}${fallback ? ` and fallback: ${fallback}` : ''}`, error);
         // error loading placeholders
         resolve({});
       });
@@ -759,9 +694,26 @@ export function getProductSku() {
  * @returns {string[]|undefined} Array of option UIDs, or undefined if not found
  */
 export function getOptionsUIDsFromUrl() {
-  return new URLSearchParams(window.location.search)
-    .get('optionsUIDs')
-    ?.split(',');
+  return new URLSearchParams(window.location.search).get('optionsUIDs')?.split(',');
+}
+
+/**
+ * Determines the store identifier for tracking history based on configuration headers.
+ * @returns {string|undefined} Store identifier based on header values or undefined.
+ */
+export function getStoreIdentifier() {
+  const headers = getHeaders('cs');
+  const saasStoreIdentifier = 'magento-store-view-code';
+  const acoStoreIdentifier = 'ac-view-id';
+  const storeIdentifierKey = Object.keys(headers).find(
+    (key) => [saasStoreIdentifier, acoStoreIdentifier].includes(key.toLowerCase()),
+  );
+  const storeIdentifier = storeIdentifierKey ? headers[storeIdentifierKey] : undefined;
+  if (!storeIdentifier) {
+    console.warn('No store view code found in config headers for tracking history');
+    return undefined;
+  }
+  return storeIdentifier;
 }
 
 /**
@@ -773,52 +725,35 @@ function trackHistory() {
     return;
   }
   // Store product view history in session storage
-  const storeViewCode = getConfigValue('headers.cs.Magento-Store-View-Code');
-  window.adobeDataLayer.push((dl) => {
-    dl.addEventListener(
-      'adobeDataLayer:change',
-      (event) => {
-        if (!event.productContext?.sku) {
+  const storeIdentifier = getStoreIdentifier();
+  if (storeIdentifier) {
+    window.adobeDataLayer.push((dl) => {
+      dl.addEventListener('adobeDataLayer:change', (event) => {
+        // Speculation Rules prerendering pushes productContext once immediately and
+        // again on activation. Ignore the prerender-only push so hovering a link
+        // doesn't record a view that never actually happened.
+        if (document.prerendering || !event.productContext || !event.productContext.sku) {
           return;
         }
-        const key = `${storeViewCode}:productViewHistory`;
+        const key = `${storeIdentifier}:productViewHistory`;
         let viewHistory = JSON.parse(window.localStorage.getItem(key) || '[]');
-        viewHistory = viewHistory.filter(
-          (item) => item.sku !== event.productContext.sku,
-        );
-        viewHistory.push({
-          date: new Date().toISOString(),
-          sku: event.productContext.sku,
-        });
-        window.localStorage.setItem(
-          key,
-          JSON.stringify(viewHistory.slice(-10)),
-        );
-      },
-      { path: 'productContext' },
-    );
-    dl.addEventListener('place-order', () => {
-      const shoppingCartContext = dl.getState('shoppingCartContext');
-      if (!shoppingCartContext) {
-        return;
-      }
-      const key = `${storeViewCode}:purchaseHistory`;
-      const purchasedProducts = shoppingCartContext.items
-        .map((item) => item.product.sku)
-        .filter(Boolean);
-      const purchaseHistory = JSON.parse(
-        window.localStorage.getItem(key) || '[]',
-      );
-      purchaseHistory.push({
-        date: new Date().toISOString(),
-        items: purchasedProducts,
+        viewHistory = viewHistory.filter((item) => item.sku !== event.productContext.sku);
+        viewHistory.push({ date: new Date().toISOString(), sku: event.productContext.sku });
+        window.localStorage.setItem(key, JSON.stringify(viewHistory.slice(-20)));
+      }, { path: 'productContext' });
+      dl.addEventListener('place-order', () => {
+        const shoppingCartContext = dl.getState('shoppingCartContext');
+        if (!shoppingCartContext) {
+          return;
+        }
+        const key = `${storeIdentifier}:purchaseHistory`;
+        const purchasedProducts = shoppingCartContext.items.map((item) => item.product.sku);
+        const purchaseHistory = JSON.parse(window.localStorage.getItem(key) || '[]');
+        purchaseHistory.push({ date: new Date().toISOString(), items: purchasedProducts });
+        window.localStorage.setItem(key, JSON.stringify(purchaseHistory.slice(-20)));
       });
-      window.localStorage.setItem(
-        key,
-        JSON.stringify(purchaseHistory.slice(-5)),
-      );
     });
-  });
+  }
 }
 
 /**
@@ -827,9 +762,7 @@ function trackHistory() {
  * @param {string} name - The name identifier for the script element
  */
 export function setJsonLd(data, name) {
-  const existingScript = document.head.querySelector(
-    `script[data-name="${name}"]`,
-  );
+  const existingScript = document.head.querySelector(`script[data-name="${name}"]`);
   if (existingScript) {
     existingScript.innerHTML = JSON.stringify(data);
     return;
@@ -844,10 +777,16 @@ export function setJsonLd(data, name) {
 }
 
 /**
- * Loads and displays an error page (e.g., 404) by replacing the current page content.
+ * Loads and displays an error page (e.g., 418) by replacing the current page
+ * content. If the code is a 404, we redirect to a non-existant page which
+ * causes the 404.html from this repo to be loaded.
  * @param {number} [code=404] - The HTTP error code for the error page
  */
 export async function loadErrorPage(code = 404) {
+  if (code === 404) {
+    window.location.replace('/notfound');
+    return;
+  }
   const htmlText = await fetch(`/${code}.html`).then((response) => {
     if (response.ok) {
       return response.text();
@@ -862,15 +801,6 @@ export async function loadErrorPage(code = 404) {
     doc.head.appendChild(style);
   });
   document.head.innerHTML = doc.head.innerHTML;
-
-  // https://developers.google.com/search/docs/crawling-indexing/javascript/fix-search-javascript
-  // Point 2. prevent soft 404 errors
-  if (code === 404) {
-    const metaRobots = document.createElement('meta');
-    metaRobots.name = 'robots';
-    metaRobots.content = 'noindex';
-    document.head.appendChild(metaRobots);
-  }
 
   // When moving script tags via innerHTML, they are not executed. They need to be re-created.
   const notImportMap = (c) => c.textContent && c.type !== 'importmap';
@@ -892,77 +822,10 @@ export async function loadErrorPage(code = 404) {
 
 /**
  * Checks if the user is authenticated
- * Priority: check auth dropin's authenticated event state (from event bus),
- * fall back to cookie check for cases where event hasn't fired yet.
  * @returns {boolean} - true if the user is authenticated
  */
 export function checkIsAuthenticated() {
-  // First check if auth dropin fired authenticated event via event bus
-  // This is set in adyen-payment block listener and reflects the authoritative auth state
-  const authDropinAuthenticated = window.__ADYEN_AUTH_STATE__?.isAuthenticated ?? null;
-
-  if (authDropinAuthenticated !== null) {
-    return authDropinAuthenticated;
-  }
-
-  // Fall back to cookie check only if event bus state not yet available
-  return !!getCookie('auth_dropin_user_token');
-}
-
-/**
- * Wait for authenticated event to fire and set the global auth state.
- * This ensures express payment blocks get the correct isGuest value.
- * Timeout after 5 seconds and fall back to cookie check.
- * @returns {Promise<boolean>} - true if the user is authenticated
- */
-export async function waitForAuthState() {
-  // Reduced from 15s to 8s. Auth state typically fires within 1-2s during dropin init.
-  // If not received by 8s, fall back to cookie check. Express checkout can still proceed
-  // and will use guest checkout if auth state unavailable.
-  const TIMEOUT_MS = 8000;
-
-  // If auth state already set, return immediately
-  if (window.__ADYEN_AUTH_STATE__?.isAuthenticated !== undefined) {
-    return window.__ADYEN_AUTH_STATE__.isAuthenticated;
-  }
-
-  // Wait for authenticated event directly OR for __ADYEN_AUTH_STATE__ to be set
-  return new Promise((resolve) => {
-    let resolved = false;
-    let checkAuthState; // Declare before use
-
-    const timer = setTimeout(() => {
-      if (!resolved) {
-        // Timeout: fall back to cookie check
-        resolved = true;
-        const result = checkIsAuthenticated();
-        resolve(result);
-      }
-    }, TIMEOUT_MS);
-
-    // Listen to authenticated event directly (faster than polling)
-    const authEventHandler = (payload) => {
-      if (!resolved) {
-        const isAuthenticated = payload === true;
-        resolved = true;
-        clearTimeout(timer);
-        clearInterval(checkAuthState);
-        resolve(isAuthenticated);
-      }
-    };
-
-    // Fallback: also poll for __ADYEN_AUTH_STATE__ in case event listener setup is delayed
-    checkAuthState = setInterval(() => {
-      if (!resolved && window.__ADYEN_AUTH_STATE__?.isAuthenticated !== undefined) {
-        resolved = true;
-        clearTimeout(timer);
-        clearInterval(checkAuthState);
-        resolve(window.__ADYEN_AUTH_STATE__.isAuthenticated);
-      }
-    }, 50); // Poll every 50ms
-
-    events.on('authenticated', authEventHandler);
-  });
+  return !!getCookie('auth_dropin_user_token') ?? false;
 }
 
 /**
@@ -971,7 +834,7 @@ export async function waitForAuthState() {
  * @returns {boolean} True if consent was given
  */
 export function getConsent(_topic) {
-  // Default to true if consent management not implemented
+  console.warn('getConsent not implemented');
   return true;
 }
 
@@ -985,9 +848,7 @@ function autolinkModals(element) {
 
     if (origin && origin.href && origin.href.includes('/modals/')) {
       e.preventDefault();
-      const { openModal } = await import(
-        `${window.hlx.codeBasePath}/blocks/modal/modal.js`
-      );
+      const { openModal } = await import(`${window.hlx.codeBasePath}/blocks/modal/modal.js`);
       openModal(origin.href);
     }
   });
@@ -1022,23 +883,5 @@ export function decorateSections(main) {
     section.classList.add('section');
     section.dataset.sectionStatus = 'initialized';
     section.style.display = 'none';
-
-    // Process section metadata
-    const sectionMeta = section.querySelector('div.section-metadata');
-    if (sectionMeta) {
-      const meta = readBlockConfig(sectionMeta);
-      Object.keys(meta).forEach((key) => {
-        if (key === 'style') {
-          const styles = meta.style
-            .split(',')
-            .filter((style) => style)
-            .map((style) => toClassName(style.trim()));
-          styles.forEach((style) => section.classList.add(style));
-        } else {
-          section.dataset[toCamelCase(key)] = meta[key];
-        }
-      });
-      sectionMeta.parentNode.remove();
-    }
   });
 }

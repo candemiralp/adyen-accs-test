@@ -1,51 +1,17 @@
-
-# package directories
+.hlx/*
+coverage/*
+logs/*
 node_modules
-jspm_packages
-
-# build
-build
-dist
-.manifest-dist.yml
-
-# Config
-config.json
-payment-methods.json
-.env*
-.aio
-
-# Adobe I/O console config
-console.json
-
-# Test output
-junit.xml
-
-# IDE & Temp
-.cache
-.idea
-.nyc_output
-.vscode
-coverage
-.aws.tmp.creds.json
-.wskdebug.props.tmp
-
-# Parcel
 .parcel-cache
 
-# OSX
+helix-importer-ui
 .DS_Store
+*.bak
+.idea
+# Ignore .map files in scripts/__dropins__/ directory and all its subdirectories
+scripts/__dropins__/**/*.map
+.env
 
-# yeoman
-.yo-repository
-
-# logs folder for aio-run-detached
-logs
-
-# Version file
-lib/version.ts
-
-# agents files (auto-generated, local-only, and temporary)
-AGENTS.md
-.learning
-.agents/
-newrelic_agent.log
+# Ensure these files are tracked
+!CLAUDE.md
+!AGENTS.md

@@ -37,18 +37,13 @@
       {
         "component": "reference",
         "name": "image",
-        "hidden": true,
-        "multi": false
-      },
-      {
-        "component": "reference",
-        "name": "img:nth-child(3)[src]",
         "label": "Image",
-        "multi": false
+        "multi": false,
+        "valueType": "string"
       },
       {
         "component": "text",
-        "name": "img:nth-child(3)[alt]",
+        "name": "imageAlt",
         "label": "Alt Text"
       }
     ]
@@ -181,87 +176,6 @@
         "label": "Text",
         "valueType": "string",
         "required": true
-      }
-    ]
-  },
-  {
-    "id": "adyen-payment-additional-action"
-  },
-  {
-    "id": "adyen-payment-applepay-express",
-    "fields": [
-      {
-        "component": "text",
-        "name": "sku",
-        "label": "Product SKU",
-        "description": "Required on Product Detail Pages: the SKU of the product to add to cart before starting express checkout. Leave empty on the Cart page."
-      }
-    ]
-  },
-  {
-    "id": "adyen-payment-googlepay-express",
-    "fields": [
-      {
-        "component": "text",
-        "name": "sku",
-        "label": "Product SKU",
-        "description": "Required on Product Detail Pages: the SKU of the product to add to cart before starting express checkout. Leave empty on the Cart page."
-      }
-    ]
-  },
-  {
-    "id": "adyen-payment-paypal-express",
-    "fields": [
-      {
-        "component": "text",
-        "name": "sku",
-        "label": "Product SKU",
-        "description": "Required on Product Detail Pages: the SKU of the product to add to cart before starting express checkout. Leave empty on the Cart page."
-      }
-    ]
-  },
-  {
-    "id": "adyen-payment-redirection",
-    "fields": [
-      {
-        "component": "text",
-        "name": "errorTitle",
-        "label": "Error Title",
-        "valueType": "string",
-        "description": "Title shown when payment fails for an existing order",
-        "value": "Payment Failed"
-      },
-      {
-        "component": "richtext",
-        "name": "errorMessage",
-        "label": "Error Message",
-        "valueType": "string",
-        "description": "Message shown when payment fails. Use ${orderNumber} to insert the order number. Explain the 24h window to contact support.",
-        "value": "<p>Your order <strong>#${orderNumber}</strong> has been created but the payment could not be completed. Please contact our support team within 24 hours to complete your payment, otherwise your order will be cancelled.</p>"
-      },
-      {
-        "component": "text",
-        "name": "supportLink",
-        "label": "Support Link URL",
-        "valueType": "string",
-        "description": "URL to the support/contact page",
-        "value": "/support"
-      },
-      {
-        "component": "text",
-        "name": "supportLinkText",
-        "label": "Support Link Text",
-        "valueType": "string",
-        "description": "Text for the support link button",
-        "value": "Contact Support"
-      },
-      {
-        "component": "text",
-        "name": "orderDetailsLinkText",
-        "label": "Order Details Link Text",
-        "valueType": "string",
-        "description": "Text for the link to view order details",
-        "value": "View Order Details"
       }
     ]
   },
@@ -552,6 +466,13 @@
         "name": "urlpath",
         "label": "URL Path",
         "description": "URL Path of the category as defined in the catalog (not CMS)"
+      },
+      {
+        "component": "number",
+        "name": "pageSize",
+        "label": "Page Size",
+        "value": 9,
+        "description": "Number of products per page (default: 9)"
       }
     ]
   },

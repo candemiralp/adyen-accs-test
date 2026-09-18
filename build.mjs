@@ -10,54 +10,7 @@ overrideGQLOperations([
   {
     npm: '@dropins/storefront-order',
     skipFragments: ['DOWNLOADABLE_ORDER_ITEMS_FRAGMENT'],
-    operations: [
-      // Extend GUEST_ORDER_FRAGMENT to include payment additional_data for Adyen actions
-      `
-  fragment GUEST_ORDER_FRAGMENT on CustomerOrder {
-    payment_methods {
-      additional_data {
-        name
-        value
-      }
-    }
-  }
-      `,
-    ],
-  },
-  {
-    npm: '@dropins/storefront-checkout',
-    operations: [
-      `
-  fragment CHECKOUT_DATA_FRAGMENT on Cart {
-    available_payment_methods {
-      code
-      title
-      oope_payment_method_config {
-        backend_integration_url
-        custom_config {
-          ... on CustomConfigKeyValue {
-              key
-              value
-          }
-        }
-      }
-    }
-    selected_payment_method {
-      code
-      title
-      oope_payment_method_config {
-        backend_integration_url
-        custom_config {
-          ... on CustomConfigKeyValue {
-              key
-              value
-          }
-        }
-      }
-    }
-  }
-    `,
-    ],
+    operations: [],
   },
   // {
   //   npm: '@dropins/storefront-checkout',
