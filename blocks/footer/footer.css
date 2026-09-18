@@ -1,3 +1,23 @@
+.demo-notice {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--color-alert-800);
+    text-align: center;
+    padding: var(--spacing-small);
+
+    p {
+        margin: 0;
+        font: var(--type-headline-2-default-font);
+        color: var(--color-neutral-100);
+    }
+}
+
+.demo-notice, .demo-notice * {
+    box-sizing: border-box;
+}
+
 footer {
     background-color: var(--color-neutral-100);
     font: var(--type-body-2-default-font);

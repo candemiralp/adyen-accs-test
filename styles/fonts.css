@@ -6,6 +6,17 @@
     font-weight: 400;
 }
 
+/* Metric-adjusted fallback for adobe-clean to minimise CLS during font swap.
+   Values approximate adobe-clean-normal-400 metrics relative to Arial. */
+@font-face {
+    font-family: roboto-fallback;
+    src: local('Arial');
+    size-adjust: 100%;
+    ascent-override: 90%;
+    descent-override: 22%;
+    line-gap-override: 0%;
+}
+
 @font-face {
     font-family: adobe-clean;
     src: url('../fonts/adobe-clean-italic-400.woff2') format('woff2');
@@ -19,7 +30,7 @@
     src: url('../fonts/adobe-clean-normal-700.woff2') format('woff2');
     font-display: swap;
     font-style: normal;
-    font-weight: 700;
+    font-weight: 700 900;
 }
 
 @font-face {
@@ -27,52 +38,12 @@
     src: url('../fonts/adobe-clean-normal-700.woff2') format('woff2');
     font-display: swap;
     font-style: italic;
-    font-weight: 700;
+    font-weight: 700 900;
 }
 
 @font-face {
     font-family: adobe-clean;
-    src: url('../fonts/adobe-clean-normal-700.woff2') format('woff2');
-    font-display: swap;
-    font-style: normal;
-    font-weight: 800;
-}
-
-@font-face {
-    font-family: adobe-clean;
-    src: url('../fonts/adobe-clean-normal-700.woff2') format('woff2');
-    font-display: swap;
-    font-style: normal;
-    font-weight: 900;
-}
-
-@font-face {
-    font-family: adobe-clean;
-    src: url('../fonts/adobe-clean-normal-700.woff2') format('woff2');
-    font-display: swap;
-    font-style: italic;
-    font-weight: 900;
-}
-
-@font-face {
-    font-family: adobe-clean;
-    src: url('../fonts/adobe-clean-normal-700.woff2') format('woff2');
-    font-display: swap;
-    font-style: italic;
-    font-weight: 800;
-}
-
-@font-face {
-    font-family: adobe-clean;
-    src: url('../fonts/adobe-clean-italic-400.woff2') format('woff2');
-    font-display: swap;
-    font-style: italic;
-    font-weight: 300;
-}
-
-@font-face {
-    font-family: adobe-clean;
-    src: url('../fonts/adobe-clean-normal-400.woff2') format('woff2');
+    src: url('../fonts/adobe-clean-normal-500.woff2') format('woff2');
     font-display: swap;
     font-style: normal;
     font-weight: 500;

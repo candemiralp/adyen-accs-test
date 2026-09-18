@@ -11,7 +11,6 @@ export const selectors = Object.freeze({
   checkout: {
     content: '.checkout__content',
     loader: '.checkout__loader',
-    loaderStatus: '.checkout__loader-status',
     mergedCartBanner: '.checkout__merged-cart-banner',
     heading: '.checkout__heading',
     serverError: '.checkout__server-error',
@@ -42,9 +41,8 @@ export const selectors = Object.freeze({
  */
 export function createCheckoutFragment() {
   return createFragment(`
+    <div class="checkout__loader"></div>
     <div class="checkout__wrapper">
-      <div class="checkout__loader"></div>
-      <div class="checkout__loader-status" role="status" aria-live="polite"></div>
       <div class="checkout__content">
         <div class="checkout__merged-cart-banner"></div>
         <div class="checkout__main">

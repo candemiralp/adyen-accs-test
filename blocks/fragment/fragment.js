@@ -9,6 +9,7 @@ import { decorateMain } from '../../scripts/scripts.js';
 import {
   loadSections,
 } from '../../scripts/aem.js';
+import { fetchWithRetry } from '../../scripts/retry-fetch.js';
 
 /**
  * Loads a fragment.
@@ -19,7 +20,7 @@ export async function loadFragment(path) {
   if (path && path.startsWith('/') && !path.startsWith('//')) {
     const root = getRootPath().replace(/\/$/, '');
     const url = `${root}${path}.plain.html`;
-    const resp = await fetch(url);
+    const resp = await fetchWithRetry(url);
     if (resp.ok) {
       const main = document.createElement('main');
       main.innerHTML = await resp.text();

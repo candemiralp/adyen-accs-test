@@ -1,14 +1,98 @@
 <meta
   http-equiv="Content-Security-Policy"
-  content="script-src 'nonce-aem' 'strict-dynamic' 'unsafe-inline' http: https:; base-uri 'self'; object-src 'none'; frame-src 'self' https:;"
+  content="script-src 'nonce-aem' 'strict-dynamic' 'unsafe-inline' http: https:; base-uri 'self'; object-src 'none';"
   move-to-http-header="true"
-/>
+>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- CRITICAL: Install console filtering FIRST, before any other scripts load.
+     This must run synchronously at document parse time to intercept ALL console calls,
+     including those from module scripts that load immediately after this. -->
+<script nonce="aem">
+  (function() {
+    // Set LOG_LEVEL from GitHub Pages config or environment (defaults to 'error' for production)
+    // Try to read from window.hlx.pagesConfig first (AEM Edge Delivery provides this)
+    // Otherwise fall back to localStorage or default to 'error'
+    const logLevelFromConfig = (window.hlx && window.hlx.pagesConfig && window.hlx.pagesConfig.logLevel)
+      || localStorage.getItem('LOG_LEVEL')
+      || 'error';
+    window.LOG_LEVEL = logLevelFromConfig;
+
+    // Console filtering based on LOG_LEVEL
+    // This intercepts ALL console calls to enforce LOG_LEVEL setting
+    const LOG_LEVELS = {
+      debug: 0,
+      info: 1,
+      warn: 2,
+      error: 3,
+      silent: 4,
+    };
+
+    function getLogLevel() {
+      return (window.LOG_LEVEL || 'error').toLowerCase();
+    }
+
+     function shouldLog(level) {
+       const currentLevel = getLogLevel();
+       const currentLevelValue = LOG_LEVELS[currentLevel] ?? LOG_LEVELS.error;
+       const logLevelValue = LOG_LEVELS[level.toLowerCase()] ?? LOG_LEVELS.error;
+       return logLevelValue >= currentLevelValue;
+     }
+
+    // Store original console methods BEFORE intercepting
+    const originalConsole = {
+      debug: console.debug,
+      info: console.info,
+      warn: console.warn,
+      error: console.error,
+    };
+
+    // Override console methods to respect LOG_LEVEL
+    console.debug = function(...args) {
+      if (shouldLog('debug')) {
+        originalConsole.debug.apply(console, args);
+      }
+    };
+
+    console.info = function(...args) {
+      if (shouldLog('info')) {
+        originalConsole.info.apply(console, args);
+      }
+    };
+
+    console.warn = function(...args) {
+      if (shouldLog('warn')) {
+        originalConsole.warn.apply(console, args);
+      }
+    };
+
+    console.error = function(...args) {
+      if (shouldLog('error')) {
+        originalConsole.error.apply(console, args);
+      }
+    };
+  })();
+</script>
+
+<!-- Resource hints: establish early connections to critical third-party origins -->
+<link rel="preconnect" href="https://na1-sandbox.api.commerce.adobe.com" crossorigin />
+<link rel="dns-prefetch" href="https://na1-sandbox.api.commerce.adobe.com" />
+<link rel="preconnect" href="https://checkoutshopper-test.adyen.com" crossorigin />
+<link rel="dns-prefetch" href="https://checkoutshopper-test.adyen.com" />
+<link rel="preconnect" href="https://use.typekit.net" crossorigin />
+<link rel="dns-prefetch" href="https://use.typekit.net" />
+
 <script nonce="aem" type="speculationrules">
     {
         "prerender": [{
             "where": {
-                "href_matches": "/*"
+                "and": [
+                    { "href_matches": "/*" },
+                    { "not": { "href_matches": "/checkout*" } },
+                    { "not": { "href_matches": "/cart*" } },
+                    { "not": { "href_matches": "/customer/*" } },
+                    { "not": { "href_matches": "/order*" } }
+                ]
             },
             "eagerness": "moderate"
         }]
@@ -21,13 +105,18 @@
             "@dropins/storefront-auth/": "/scripts/__dropins__/storefront-auth/",
             "@dropins/storefront-cart/": "/scripts/__dropins__/storefront-cart/",
             "@dropins/storefront-checkout/": "/scripts/__dropins__/storefront-checkout/",
+            "@dropins/storefront-company-management/": "/scripts/__dropins__/storefront-company-management/",
+            "@dropins/storefront-company-switcher/": "/scripts/__dropins__/storefront-company-switcher/",
             "@dropins/storefront-order/": "/scripts/__dropins__/storefront-order/",
             "@dropins/storefront-payment-services/": "/scripts/__dropins__/storefront-payment-services/",
             "@dropins/storefront-pdp/": "/scripts/__dropins__/storefront-pdp/",
-            "@dropins/storefront-recommendations/": "/scripts/__dropins__/storefront-recommendations/",
-            "@dropins/storefront-wishlist/": "/scripts/__dropins__/storefront-wishlist/",
             "@dropins/storefront-personalization/": "/scripts/__dropins__/storefront-personalization/",
             "@dropins/storefront-product-discovery/": "/scripts/__dropins__/storefront-product-discovery/",
+            "@dropins/storefront-purchase-order/": "/scripts/__dropins__/storefront-purchase-order/",
+            "@dropins/storefront-quote-management/": "/scripts/__dropins__/storefront-quote-management/",
+            "@dropins/storefront-recommendations/": "/scripts/__dropins__/storefront-recommendations/",
+            "@dropins/storefront-requisition-list/": "/scripts/__dropins__/storefront-requisition-list/",
+            "@dropins/storefront-wishlist/": "/scripts/__dropins__/storefront-wishlist/",
             "@dropins/tools/": "/scripts/__dropins__/tools/"
         }
     }
@@ -57,3 +146,36 @@
 <link rel="modulepreload" href="/scripts/__dropins__/tools/preact-compat.js" />
 <link rel="modulepreload" href="/scripts/__dropins__/tools/preact-hooks.js" />
 <link rel="modulepreload" href="/scripts/__dropins__/tools/components.js" />
+
+<!-- Preload primary body font to eliminate FOUT on first visit -->
+<link rel="preload" as="font" href="/fonts/adobe-clean-normal-400.woff2" type="font/woff2" crossorigin />
+
+<!-- Preload Adyen Web SDK (JS + CSS) on checkout pages to avoid a waterfall.
+     The version is read from the session-cached config so the preload href
+     always matches what loadAdyenWebSDK() will actually request at runtime. -->
+<script nonce="aem">
+  if (window.location.pathname.startsWith('/checkout')) {
+    var adyenVersion = '6.23.0'; // fallback; overwritten below when config is warm
+    try {
+      var _cfg = JSON.parse(sessionStorage.getItem('config') || '{}');
+      var _v = (_cfg.public && _cfg.public.default && _cfg.public.default['adyen-web-sdk-version']);
+      if (_v) adyenVersion = _v;
+    } catch (e) { /* ignore — use fallback version */ }
+
+    var adyenBase = 'https://checkoutshopper-test.adyen.com/checkoutshopper/sdk/' + adyenVersion + '/adyen.';
+
+    var adyenJsPreload = document.createElement('link');
+    adyenJsPreload.rel = 'preload';
+    adyenJsPreload.as = 'script';
+    adyenJsPreload.href = adyenBase + 'js';
+    adyenJsPreload.setAttribute('crossorigin', 'anonymous');
+    document.head.appendChild(adyenJsPreload);
+
+    var adyenCssPreload = document.createElement('link');
+    adyenCssPreload.rel = 'preload';
+    adyenCssPreload.as = 'style';
+    adyenCssPreload.href = adyenBase + 'css';
+    adyenCssPreload.setAttribute('crossorigin', 'anonymous');
+    document.head.appendChild(adyenCssPreload);
+  }
+</script>
