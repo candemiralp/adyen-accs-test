@@ -1,0 +1,29 @@
+{
+  "blocks": [
+    {
+      "name": "commerce-checkout",
+      "title": "Checkout",
+      "description": "Customer checkout flow integrated with Adyen."
+    },
+    {
+      "name": "adyen-payment-redirection",
+      "title": "Adyen Payment Redirection",
+      "description": "Handles return from Adyen redirect payment flows (3DS, iDEAL, PayPal, etc.) and displays error messages for failed payments."
+    },
+    {
+      "name": "adyen-payment-applepay-express",
+      "title": "Adyen Payment Apple Pay Express",
+      "description": "Apple Pay express checkout button for Cart and PDP pages. Set 'sku' for PDP use, leave empty on Cart."
+    },
+    {
+      "name": "adyen-payment-googlepay-express",
+      "title": "Adyen Payment Google Pay Express",
+      "description": "Google Pay express checkout button for Cart and PDP pages. Set 'sku' for PDP use, leave empty on Cart."
+    },
+    {
+      "name": "adyen-payment-paypal-express",
+      "title": "Adyen Payment PayPal Express",
+      "description": "PayPal express checkout button for Cart and PDP pages. Set 'sku' for PDP use, leave empty on Cart."
+    }
+  ]
+}

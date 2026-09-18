@@ -1,0 +1,14 @@
+{
+  "definitions": [
+    {
+      "title": "Adyen Payment Additional Action",
+      "id": "adyen-payment-additional-action"
+    }
+  ],
+  "models": [
+    {
+      "id": "adyen-payment-additional-action"
+    }
+  ],
+  "filters": []
+}

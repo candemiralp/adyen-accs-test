@@ -1,0 +1,28 @@
+{
+  "definitions": [
+    {
+      "title": "Adyen Payment Google Pay Express",
+      "id": "adyen-payment-googlepay-express",
+      "model": "adyen-payment-googlepay-express",
+      "plugins": {
+        "da": {
+          "type": "key-value-block"
+        }
+      }
+    }
+  ],
+  "models": [
+    {
+      "id": "adyen-payment-googlepay-express",
+      "fields": [
+        {
+          "component": "text",
+          "name": "sku",
+          "label": "Product SKU",
+          "description": "Required on Product Detail Pages: the SKU of the product to add to cart before starting express checkout. Leave empty on the Cart page."
+        }
+      ]
+    }
+  ],
+  "filters": []
+}

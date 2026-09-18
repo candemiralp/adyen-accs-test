@@ -1,0 +1,28 @@
+{
+  "definitions": [
+    {
+      "title": "Adyen Payment PayPal Express",
+      "id": "adyen-payment-paypal-express",
+      "model": "adyen-payment-paypal-express",
+      "plugins": {
+        "da": {
+          "type": "key-value-block"
+        }
+      }
+    }
+  ],
+  "models": [
+    {
+      "id": "adyen-payment-paypal-express",
+      "fields": [
+        {
+          "component": "text",
+          "name": "sku",
+          "label": "Product SKU",
+          "description": "Required on Product Detail Pages: the SKU of the product to add to cart before starting express checkout. Leave empty on the Cart page."
+        }
+      ]
+    }
+  ],
+  "filters": []
+}
