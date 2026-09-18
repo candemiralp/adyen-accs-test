@@ -1,0 +1,46 @@
+.adyen-payment-klarna {
+  max-width: 420px;
+  margin: 1rem auto;
+}
+
+.adyen-payment-klarna__mount {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+
+.adyen-payment-klarna__component {
+  border: 1px solid #e2e4ea;
+  border-radius: 6px;
+  padding: 0.75rem;
+  background-color: #fff;
+}
+
+.adyen-payment-klarna__messages {
+  font: 14px/1.4 system-ui, sans-serif;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  background-color: #f5f5f7;
+  color: #1f1f1f;
+}
+
+.adyen-payment-klarna__messages[hidden] {
+  display: none;
+}
+
+.adyen-payment-klarna__messages--info {
+  background-color: #eef3ff;
+  color: #1c3a8f;
+}
+
+.adyen-payment-klarna__messages--success {
+  background-color: #e6f6ed;
+  color: #176437;
+}
+
+.adyen-payment-klarna__messages--error {
+  background-color: #fdebea;
+  color: #a12624;
+}

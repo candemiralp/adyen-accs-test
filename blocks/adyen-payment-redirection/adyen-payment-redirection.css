@@ -1,0 +1,114 @@
+.adyen-payment-redirection__loader {
+  align-items: center;
+  background: var(--color-neutral-50, #fff);
+  display: flex;
+  height: 100vh;
+  justify-content: center;
+  left: 0;
+  opacity: 0.85;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 9999;
+}
+
+.adyen-payment-redirection__spinner {
+  animation: adyen-spin 0.8s linear infinite;
+  border: 3px solid var(--color-neutral-200, #e0e0e0);
+  border-radius: 50%;
+  border-top-color: var(--color-brand, #000);
+  height: 48px;
+  width: 48px;
+}
+
+@keyframes adyen-spin {
+  to { transform: rotate(360deg); }
+}
+
+.adyen-payment-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+  max-width: 600px;
+  margin: 2rem auto;
+}
+
+.adyen-payment-error__icon {
+  color: var(--color-negative, #c41700);
+  margin-bottom: 1rem;
+}
+
+.adyen-payment-error__title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+  color: var(--color-negative, #c41700);
+}
+
+.adyen-payment-error__message {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text, #333);
+  margin-bottom: 1.5rem;
+}
+
+.adyen-payment-error__message p {
+  margin: 0;
+}
+
+.adyen-payment-error__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 300px;
+}
+
+@media (min-width: 600px) {
+  .adyen-payment-error__actions {
+    flex-direction: row;
+    max-width: none;
+  }
+}
+
+.adyen-payment-error__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 0.2s, border-color 0.2s;
+  cursor: pointer;
+}
+
+.adyen-payment-error__button--primary {
+  background-color: var(--color-brand, #000);
+  color: var(--color-brand-contrast, #fff);
+  border: 1px solid var(--color-brand, #000);
+}
+
+.adyen-payment-error__button--primary:hover {
+  background-color: var(--color-brand-hover, #333);
+}
+
+.adyen-payment-error__button--secondary {
+  background-color: transparent;
+  color: var(--color-brand, #000);
+  border: 1px solid var(--color-brand, #000);
+}
+
+.adyen-payment-error__button--secondary:hover {
+  background-color: var(--color-neutral-100, #f5f5f5);
+}
+
+.adyen-payment-error__order-info {
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted, #666);
+}
+

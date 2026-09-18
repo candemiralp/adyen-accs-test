@@ -1,0 +1,272 @@
+/**
+ * Adyen Payment Additional Action Block Styles
+ */
+
+.adyen-additional-action-container {
+  width: 100%;
+}
+
+/* Base action card styles */
+.adyen-additional-action {
+  background-color: var(--color-neutral-50, #f9fafb);
+  border: 1px solid var(--color-neutral-200, #e5e7eb);
+  border-radius: 8px;
+  padding: 24px;
+  margin-top: 16px;
+}
+
+/* Voucher variant */
+.adyen-additional-action--voucher {
+  background-color: var(--color-info-50, #eff6ff);
+  border-color: var(--color-info-200, #bfdbfe);
+}
+
+/* QR Code variant */
+.adyen-additional-action--qrcode {
+  background-color: var(--color-neutral-50, #f9fafb);
+  border-color: var(--color-neutral-200, #e5e7eb);
+  text-align: center;
+}
+
+/* Await/Pending variant */
+.adyen-additional-action--await {
+  background-color: var(--color-warning-50, #fffbeb);
+  border-color: var(--color-warning-200, #fde68a);
+  text-align: center;
+}
+
+/* Title */
+.adyen-additional-action__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-neutral-900, #111827);
+  margin: 0 0 12px;
+}
+
+/* Description */
+.adyen-additional-action__description {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-neutral-700, #374151);
+  margin: 0 0 20px;
+}
+
+/* Details section */
+.adyen-additional-action__details {
+  background-color: white;
+  border: 1px solid var(--color-neutral-200, #e5e7eb);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.adyen-additional-action__detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-neutral-100, #f3f4f6);
+}
+
+.adyen-additional-action__detail-item:last-child {
+  border-bottom: none;
+}
+
+.adyen-additional-action__label {
+  font-size: 14px;
+  color: var(--color-neutral-600, #4b5563);
+  font-weight: 500;
+}
+
+.adyen-additional-action__value {
+  font-size: 14px;
+  color: var(--color-neutral-900, #111827);
+  font-weight: 600;
+}
+
+.adyen-additional-action__value--mono {
+  font-family: monospace;
+  background-color: var(--color-neutral-100, #f3f4f6);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* Download button */
+.adyen-additional-action__download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background-color: var(--color-brand-500, #0070f3);
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.adyen-additional-action__download-btn:hover {
+  background-color: var(--color-brand-600, #0061d5);
+  color: white;
+  text-decoration: none;
+}
+
+.adyen-additional-action__download-btn:focus {
+  outline: 2px solid var(--color-brand-500, #0070f3);
+  outline-offset: 2px;
+}
+
+/* Add PDF icon before the download button text */
+.adyen-additional-action__download-btn::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' /%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+/* QR Code styles */
+.adyen-additional-action__qr-container {
+  display: flex;
+  justify-content: center;
+  margin: 24px 0;
+}
+
+.adyen-additional-action__qr-image {
+  border: 8px solid white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -1px rgb(0 0 0 / 6%);
+}
+
+.adyen-additional-action__copy-container {
+  display: flex;
+  gap: 8px;
+  max-width: 400px;
+  margin: 16px auto;
+}
+
+.adyen-additional-action__code-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--color-neutral-300, #d1d5db);
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: monospace;
+  background-color: var(--color-neutral-50, #f9fafb);
+  color: var(--color-neutral-700, #374151);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adyen-additional-action__code-input:focus {
+  outline: 2px solid var(--color-brand-500, #0070f3);
+  outline-offset: -2px;
+}
+
+.adyen-additional-action__copy-btn {
+  padding: 10px 16px;
+  background-color: var(--color-neutral-800, #1f2937);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.adyen-additional-action__copy-btn:hover {
+  background-color: var(--color-neutral-700, #374151);
+}
+
+.adyen-additional-action__expiry {
+  font-size: 13px;
+  color: var(--color-neutral-500, #6b7280);
+  margin: 16px 0 0;
+}
+
+/* Await/Pending styles */
+.adyen-additional-action__icon-container {
+  margin-bottom: 16px;
+}
+
+.adyen-additional-action__pending-icon {
+  color: var(--color-warning-600, #d97706);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.adyen-additional-action__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: var(--color-warning-100, #fef3c7);
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--color-warning-800, #92400e);
+}
+
+.adyen-additional-action__status-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-warning-500, #f59e0b);
+  border-radius: 50%;
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .adyen-additional-action {
+    padding: 16px;
+  }
+
+  .adyen-additional-action__title {
+    font-size: 16px;
+  }
+
+  .adyen-additional-action__description {
+    font-size: 13px;
+  }
+
+  .adyen-additional-action__detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .adyen-additional-action__copy-container {
+    flex-direction: column;
+  }
+
+  .adyen-additional-action__code-input {
+    width: 100%;
+  }
+
+  .adyen-additional-action__copy-btn {
+    width: 100%;
+  }
+}

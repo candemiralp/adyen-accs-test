@@ -1,0 +1,30 @@
+/* Base styling for the Adyen PayPal block */
+.adyen-payment-paypal {
+  display: block;
+  padding: 16px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  background-color: var(--background-color, #fff);
+}
+
+.adyen-payment-paypal .adyen-checkout__payment-method {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.adyen-payment-paypal__messages {
+  margin-bottom: 16px;
+  font-size: 0.9375rem;
+}
+
+.adyen-payment-paypal__messages--info {
+  color: var(--text-color, #374151);
+}
+
+.adyen-payment-paypal__messages--success {
+  color: #15803d;
+}
+
+.adyen-payment-paypal__messages--error {
+  color: #b91c1c;
+}
