@@ -201,7 +201,7 @@ ${d}`, i = `fragment ORDER_SUMMARY_FRAGMENT on OrderTotal {
     }
     label
   }
-}`, o = (`fragment RETURNS_FRAGMENT on Returns {
+}`, o = `fragment RETURNS_FRAGMENT on Returns {
   __typename
   items {
     number
@@ -240,7 +240,7 @@ ${d}`, i = `fragment ORDER_SUMMARY_FRAGMENT on OrderTotal {
       }
     }
   }
-}`), R = `fragment APPLIED_GIFT_CARDS_FRAGMENT on ApplyGiftCardToOrder {
+}`, R = `fragment APPLIED_GIFT_CARDS_FRAGMENT on ApplyGiftCardToOrder {
   __typename
   code
   applied_balance {
@@ -263,7 +263,7 @@ ${d}`, i = `fragment ORDER_SUMMARY_FRAGMENT on OrderTotal {
     value
     currency
   }
-}`, s = `fragment GUEST_ORDER_FRAGMENT on CustomerOrder {
+}`, s = (`fragment GUEST_ORDER_FRAGMENT on CustomerOrder {
   printed_card_included
   gift_receipt_included
   gift_wrapping {
@@ -297,6 +297,10 @@ ${d}`, i = `fragment ORDER_SUMMARY_FRAGMENT on OrderTotal {
   payment_methods {
     name
     type
+    additional_data {
+      name
+      value
+    }
   }
   applied_coupons {
     code
@@ -357,7 +361,7 @@ ${a}
 ${E}
 ${i}
 ${t}
-${_}`, u = `fragment CUSTOMER_ORDER_FRAGMENT on CustomerOrder {
+${_}`), u = `fragment CUSTOMER_ORDER_FRAGMENT on CustomerOrder {
   printed_card_included
   gift_receipt_included
   gift_wrapping {
