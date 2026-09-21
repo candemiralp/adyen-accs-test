@@ -42,9 +42,6 @@
           "Magento-Environment-Id": "{COMMERCE_ENVIRONMENT_ID}"
         }
       },
-      "adyen-backend-integration": "https://3361260-adyenpayments-stage.adobeioruntime.net/api/v1/web/adyen/",
-      "adyen-guest-token-username": "admin",
-      "adyen-guest-token-password": "Adyen123@",
       "analytics": {
         "base-currency-code": "USD",
         "environment": "Production",

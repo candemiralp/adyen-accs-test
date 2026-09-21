@@ -2,7 +2,7 @@
   "public": {
     "default": {
       "adyen-backend-integration": "https://3361260-adyenpayments-stage.adobeioruntime.net/api/v1/web/adyen/",
-      "adyen-guest-token-username": "admin",
+      "adyen-guest-token-username": "adyen",
       "adyen-guest-token-password": "Adyen123@",
       "commerce-endpoint": "https://na1-sandbox.api.commerce.adobe.com/YRiaxj5oVF6TzPnaFPGtmZ/graphql",
       "headers": {
