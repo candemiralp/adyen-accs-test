@@ -43,8 +43,8 @@
         }
       },
       "adyen-backend-integration": "https://3361260-adyenpayments-stage.adobeioruntime.net/api/v1/web/adyen/",
-      "adyen-guest-token-username": "{ADYEN_GUEST_TOKEN_USERNAME}",
-      "adyen-guest-token-password": "{ADYEN_GUEST_TOKEN_PASSWORD}",
+      "adyen-guest-token-username": "admin",
+      "adyen-guest-token-password": "Adyen123@",
       "analytics": {
         "base-currency-code": "USD",
         "environment": "Production",
