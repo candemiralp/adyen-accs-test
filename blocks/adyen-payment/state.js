@@ -99,6 +99,30 @@ export function getPaymentResultSync() {
   return null;
 }
 
+const COMPLETED_RESULT_CODES = ['Authorised', 'Pending', 'Received'];
+
+/**
+ * The stored payment result, only when it records a completed payment for the given cart.
+ *
+ * The stored result outlives the checkout that wrote it (it is kept in localStorage) and can be
+ * edited by the shopper, so on its own it proves nothing about the cart being placed. A result
+ * written for another cart, still waiting on an action, or for a payment that did not succeed is
+ * not returned.
+ *
+ * @param {string} cartId - The cart being placed
+ * @returns {PaymentResult|null}
+ */
+export function getCompletedPaymentResultForCart(cartId) {
+  const result = getPaymentResultSync();
+  if (!cartId || !result?.pspReference || result.cartId !== cartId) {
+    return null;
+  }
+  if (!COMPLETED_RESULT_CODES.includes(result.resultCode) || result.action) {
+    return null;
+  }
+  return result;
+}
+
 /**
  * Clear payment result from memory and storage.
  */
@@ -137,6 +161,60 @@ export function setPaymentResultFetchPromise(promise) {
  */
 export function getPaymentResultFetchPromise() {
   return paymentResultFetchPromise;
+}
+
+// ============================================================================
+// PLACED ORDER CART
+// ============================================================================
+// The cart an order was placed from. placeOrder resets the cart, so this is the
+// only record of it once the order exists. The backend binds a guest token to
+// this cart, so order-result and donations need it after placement. Every path
+// that places an order records it: the Place Order button and the wallet
+// handlers, which place the order themselves.
+// ============================================================================
+
+let placedOrderCartId = null;
+
+/**
+ * Record the cart an order is about to be placed from, or null to clear it.
+ * @param {string|null} cartId
+ */
+export function setPlacedOrderCartId(cartId) {
+  placedOrderCartId = cartId || null;
+}
+
+/**
+ * @returns {string|null} The cart the last order was placed from
+ */
+export function getPlacedOrderCartId() {
+  return placedOrderCartId;
+}
+
+// ============================================================================
+// CHECKOUT FORM VALIDATION
+// ============================================================================
+// Wallet buttons (Google Pay, Apple Pay, PayPal) open their payment sheet from
+// their own button, not from Place Order, so they would skip the checkout
+// form validation. Checkout registers its form validator here and the wallet
+// blocks run it from onClick before the sheet opens.
+// ============================================================================
+
+let checkoutFormsValidator = null;
+
+/**
+ * Register the checkout form validator, or null to remove it.
+ * @param {Function|null} validator - Returns true when the forms are valid; shows errors otherwise
+ */
+export function setCheckoutFormsValidator(validator) {
+  checkoutFormsValidator = typeof validator === 'function' ? validator : null;
+}
+
+/**
+ * Validate the checkout forms before a wallet opens its payment sheet.
+ * @returns {boolean} true when the forms are valid, or when no checkout validator is registered
+ */
+export function validateCheckoutForms() {
+  return checkoutFormsValidator ? checkoutFormsValidator() : true;
 }
 
 // ============================================================================

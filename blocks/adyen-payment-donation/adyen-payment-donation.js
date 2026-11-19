@@ -7,6 +7,7 @@
 import { getConfigValue } from '@dropins/tools/lib/aem/configs.js';
 
 import { adyenFetch } from '../../scripts/adyen-auth.js';
+import { getUserTokenCookie } from '../../scripts/initializers/index.js';
 import {
   getAdyenCheckout,
   getAdyenConfiguration,
@@ -46,7 +47,9 @@ async function _fetchDonationCampaigns(currency, locale = 'en-US', cartId = null
         locale,
         scope,
       }),
-    }, { backendUrl, shopperId, cartId });
+    }, {
+      backendUrl, shopperId, cartId, isGuest: !getUserTokenCookie(),
+    });
 
     if (!response.ok) {
       if (response.status === 405 || response.status === 404) {
@@ -72,7 +75,13 @@ async function _fetchDonationCampaigns(currency, locale = 'en-US', cartId = null
   }
 }
 
-async function handleOnDonate(state, component, orderData) {
+/**
+ * @param {string|null} cartId - The cart the order was placed from, captured when the component
+ *   mounted. The backend binds a guest token to this cart, so it is sent both to mint the token
+ *   and in the request body. It is captured at mount because checkout clears its copy once the
+ *   success page has rendered, well before the shopper clicks Donate.
+ */
+async function handleOnDonate(state, component, orderData, cartId) {
   if (!state.isValid) {
     console.error('Invalid donation state');
     return;
@@ -118,8 +127,11 @@ async function handleOnDonate(state, component, orderData) {
       body: JSON.stringify({
         request: donationRequest,
         scope,
+        cartId,
       }),
-    }, { backendUrl, shopperId });
+    }, {
+      backendUrl, shopperId, cartId, isGuest: !getUserTokenCookie(),
+    });
 
     if (!response.ok) {
       throw new Error('Donation request failed');
@@ -184,7 +196,7 @@ export async function mountDonationComponent(container, orderData) {
     donationConfig = {
       ...campaign,
       showCancelButton: true,
-      onDonate: (state, component) => handleOnDonate(state, component, orderData),
+      onDonate: (state, component) => handleOnDonate(state, component, orderData, cartId),
       onCancel: handleOnCancel,
     };
 

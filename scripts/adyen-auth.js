@@ -21,7 +21,6 @@ function getCommerceToken() {
     console.debug('[Adyen] getCommerceToken: CORE_FETCH_GRAPHQL returned', {
       hasAuthHeader: !!authHeader,
       authHeaderType: typeof authHeader,
-      authHeaderPrefix: authHeader?.substring(0, 30),
       startsWithBearer: authHeader?.startsWith('Bearer '),
     });
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -33,7 +32,6 @@ function getCommerceToken() {
     // eslint-disable-next-line no-console
     console.debug('[Adyen] getCommerceToken: extracted token', {
       length: token.length,
-      prefix: token.substring(0, 30),
     });
     return token;
   } catch (error) {
@@ -172,7 +170,6 @@ export async function adyenFetch(url, options = {}, authContext = {}) {
       console.debug('[Adyen] getCommerceToken returned', {
         hasToken: !!token,
         tokenLength: token?.length,
-        tokenPrefix: token?.substring(0, 30),
       });
       if (!token) {
         // eslint-disable-next-line no-console
@@ -200,12 +197,11 @@ export async function adyenFetch(url, options = {}, authContext = {}) {
     // eslint-disable-next-line no-console
     console.debug('[FRONTEND-DEBUG] Making request with Bearer token', {
       tokenLength: t.length,
-      tokenPrefix: t.substring(0, 50),
       url,
       isGuest,
       headers: {
         'Content-Type': headers['Content-Type'],
-        Authorization: headers.Authorization ? `Bearer ${headers.Authorization.substring(7, 57)}...` : 'N/A',
+        hasAuthorization: !!headers.Authorization,
       },
     });
     return fetch(url, {

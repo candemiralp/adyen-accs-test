@@ -5,7 +5,7 @@
 import {
   showLoading, hideLoading, showError, clearError,
 } from '../adyen-payment/utils.js';
-import { getAdyenCheckout, setActiveComponent } from '../adyen-payment/index.js';
+import { getAdyenCheckout, setActiveComponent, validateCheckoutForms } from '../adyen-payment/index.js';
 
 export default async function decorate(block) {
   const container = document.createElement('div');
@@ -19,6 +19,8 @@ export default async function decorate(block) {
     const checkout = await getAdyenCheckout();
     const paymentMethod = new window.AdyenWeb.PayPal(checkout, {
       showPayButton: true,
+      // Validate the checkout forms before the PayPal window opens.
+      onClick: (data, actions) => (validateCheckoutForms() ? actions.resolve() : actions.reject()),
       onPaymentFailed: () => showError(container, 'Payment failed. Please try again.'),
       onError: (error) => showError(container, error.message || 'An error occurred.'),
     });

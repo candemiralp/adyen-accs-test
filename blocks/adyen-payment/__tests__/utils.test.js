@@ -7,6 +7,7 @@
 import {
   getAdyenCDNLogoUrl,
   formatAmount,
+  minorUnitsFor,
   parseAmount,
   getBrowserInfo,
   getAdyenCheckoutFactory,
@@ -383,6 +384,27 @@ describe('Adyen Payment Utilities', () => {
       const parsed = parseAmount(formatted);
       // Should round-trip successfully
       expect(parsed).toBeCloseTo(19.999, 2);
+    });
+  });
+
+  describe('minorUnitsFor (kept identical to the backend lib/currency.ts)', () => {
+    it.each([
+      ['JPY', 0], ['KRW', 0], ['ISK', 0], ['VND', 0], ['XOF', 0], ['UGX', 0],
+      ['KWD', 3], ['BHD', 3], ['IQD', 3], ['LYD', 3],
+      ['USD', 2], ['EUR', 2], ['GBP', 2],
+    ])('%s has %d decimals', (currency, decimals) => {
+      expect(minorUnitsFor(currency)).toBe(decimals);
+    });
+
+    it('ignores case', () => {
+      expect(minorUnitsFor('jpy')).toBe(0);
+      expect(minorUnitsFor('kwd')).toBe(3);
+    });
+
+    it('converts currencies the old table missed', () => {
+      expect(formatAmount(1500, 'ISK')).toEqual({ value: 1500, currency: 'ISK' });
+      expect(formatAmount(12.345, 'IQD')).toEqual({ value: 12345, currency: 'IQD' });
+      expect(parseAmount({ value: 25000, currency: 'VND' })).toBe(25000);
     });
   });
 });

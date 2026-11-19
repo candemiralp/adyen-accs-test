@@ -84,11 +84,16 @@ import {
   getCheckoutDataSnapshot,
   getScopeCode,
   recoverCart,
+  resumePendingRecovery,
   setRecoveryStartCallback,
   setRedirectPaymentCode,
   clearRedirectPaymentCode,
   waitForOnSubmitResult,
   setHandlePlaceOrderActive,
+  setPlacedOrderCartId,
+  getPlacedOrderCartId,
+  setCheckoutFormsValidator,
+  getCompletedPaymentResultForCart,
 } from '../adyen-payment/index.js';
 import { isNative3DSAction, showError } from '../adyen-payment/utils.js';
 import { STORAGE_KEYS } from '../adyen-payment/storage.js';
@@ -110,6 +115,10 @@ function redirectToCartIfEmpty(cartData) {
 export default async function decorate(block) {
   setMetaTags('Checkout');
   document.title = 'Checkout';
+
+  // A declined customer order whose cart recovery needs the customer to sign in:
+  // either send them to sign in, or replay the recovery now that they have.
+  if (await resumePendingRecovery()) return;
 
   // Capture whether this page load is a payment-failure recovery redirect.
   // The failure handler writes PAYMENT_ERROR to sessionStorage before
@@ -153,10 +162,6 @@ export default async function decorate(block) {
   // Track the payment method code used when placing an order
   // Used to determine if pending order data should be stored for Adyen payments
   let lastPlacedOrderPaymentCode = null;
-
-  // Store the cartId before placeOrder is called and cart/reset clears sessionStorage.
-  // This allows fetchOrderResult to have the cartId even after the cart has been reset.
-  let lastPlacedOrderCartId = null;
 
   // Preload the checkout-success block once the customer initiates checkout.
   // Called inside handlePlaceOrder, so it fires while the order is processing,
@@ -240,14 +245,19 @@ export default async function decorate(block) {
     emailInput.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
+  const validateCheckoutForms = () => validateForms([
+    { name: LOGIN_FORM_NAME },
+    { name: SHIPPING_FORM_NAME, ref: shippingFormRef },
+    { name: BILLING_FORM_NAME, ref: billingFormRef },
+    { name: PURCHASE_ORDER_FORM_NAME },
+    { name: TERMS_AND_CONDITIONS_FORM_NAME },
+  ]);
+  // Wallet buttons open their payment sheet without Place Order, so they run this
+  // from onClick. Forms only: a wallet component is not valid until its sheet completes.
+  setCheckoutFormsValidator(validateCheckoutForms);
+
   const handleValidation = () => {
-    let success = validateForms([
-      { name: LOGIN_FORM_NAME },
-      { name: SHIPPING_FORM_NAME, ref: shippingFormRef },
-      { name: BILLING_FORM_NAME, ref: billingFormRef },
-      { name: PURCHASE_ORDER_FORM_NAME },
-      { name: TERMS_AND_CONDITIONS_FORM_NAME },
-    ]);
+    let success = validateCheckoutForms();
 
     const selectedRadio = $paymentMethods.querySelector(
       'input[type="radio"][name="payment-method"]:checked',
@@ -271,11 +281,9 @@ export default async function decorate(block) {
   // Reset order placement state variables
   const resetPlacingOrderState = () => {
     lastPlacedOrderPaymentCode = null;
-    // Don't clear lastPlacedOrderCartId here - it's needed by the order success
+    // Don't clear the placed order cart here - it's needed by the order success
     // page for donation component initialization. Instead, keep it in sessionStorage for
     // the order success page to access, and clear it only after rendering is complete.
-    // lastPlacedOrderCartId = null;
-    // window.__adyenCheckoutLastCartId = null;
   };
 
   const handlePlaceOrder = async ({ cartId, code }) => {
@@ -291,8 +299,7 @@ export default async function decorate(block) {
     ensureSuccessPreloaded();
     placingOrder = true;
     // Store the cartId before placeOrder is called, since cart/reset will clear sessionStorage
-    lastPlacedOrderCartId = cartId;
-    window.__adyenCheckoutLastCartId = cartId;
+    setPlacedOrderCartId(cartId);
     await displayOverlaySpinner(loaderRef, $loader);
     // Clear any stale pendingOrderData from a previous redirect flow.
     // If left in localStorage it can bleed into the pre-auth 3DS path:
@@ -386,7 +393,13 @@ export default async function decorate(block) {
         // with a pspReference that process-order-payment has no record of.
         // Forward that pspReference so the backend can register a second order-lookup
         // entry, allowing events-consumer to correlate the webhook to the order.
-        const preOrderResult = getPaymentResultSync();
+        // Only a completed payment written for this cart is forwarded, and never for cards or
+        // redirect methods, which do not pay before placeOrder: a result left over from an
+        // earlier attempt (a declined card, another cart) would otherwise be claimed as this
+        // order's payment and get the order rejected.
+        const preOrderResult = isRedirectMethod || isPreAuthScheme
+          ? null
+          : getCompletedPaymentResultForCart(cartId);
         console.info('[handlePlaceOrder] Checking for pre-order payment result:', {
           hasPreOrderResult: !!preOrderResult,
           preOrderResult: preOrderResult ? {
@@ -820,41 +833,27 @@ export default async function decorate(block) {
       console.info('[handleOrderPlaced] Adyen payment - displaying spinner and fetching result');
       await displayOverlaySpinner(loaderRef, $loader);
 
-      // If the frontend already has a success result from a prior /payments call
-      // (e.g. Google Pay's createDefaultOnSubmit got 'Authorised' before order/placed fired),
-      // skip fetchOrderResult — the frontend result is authoritative and querying the backend
-      // at this point would race against process-order-payment which hasn't stored its result yet.
-      const SUCCESS_RESULT_CODES_IMMEDIATE = ['Authorised', 'Pending', 'Received'];
-      const existingResult = getPaymentResultSync();
-      const hasImmediateSuccess = existingResult?.resultCode
-        && SUCCESS_RESULT_CODES_IMMEDIATE.includes(existingResult.resultCode)
-        && !existingResult.action; // No 3DS action pending
-
-      if (hasImmediateSuccess) {
-        console.info('[handleOrderPlaced] Immediate success result available, skipping fetchOrderResult:', {
-          resultCode: existingResult.resultCode,
-          pspReference: existingResult.pspReference,
-        });
-      } else {
-        // Start fetching the payment result from the backend, then await it
-        // Pass the stored cartId so it's available even after cart/reset has cleared sessionStorage
-        console.info('[handleOrderPlaced] Fetching order result for:', {
-          orderNumber: orderData.number,
-          email: orderData.email,
-          cartId: lastPlacedOrderCartId,
-          hasOrderToken: !!orderData.token,
-        });
-        // orderData.token is the Commerce order token for this specific order — the same anchor
-        // already sent to recover-cart. Guest orders carry it; authenticated orders do not, and
-        // the backend binds those to the account instead.
-        fetchOrderResult(
-          orderData.number,
-          orderData.email,
-          lastPlacedOrderCartId,
-          orderData.token,
-        );
-      }
-      const result = hasImmediateSuccess ? existingResult : await getPaymentResult();
+      // Always read the outcome from the backend, even when a wallet already received
+      // 'Authorised' from /payments. The order-placement webhook can still reject that payment
+      // for this order (and cancel the order), and only order-result knows. The webhook runs
+      // inside placeOrder, so its result is stored before order/placed fires.
+      // Pass the stored cartId so it's available even after cart/reset has cleared sessionStorage
+      console.info('[handleOrderPlaced] Fetching order result for:', {
+        orderNumber: orderData.number,
+        email: orderData.email,
+        cartId: getPlacedOrderCartId(),
+        hasOrderToken: !!orderData.token,
+      });
+      // orderData.token is the Commerce order token for this specific order — the same anchor
+      // already sent to recover-cart. Guest orders carry it; authenticated orders do not, and
+      // the backend binds those to the account instead.
+      fetchOrderResult(
+        orderData.number,
+        orderData.email,
+        getPlacedOrderCartId(),
+        orderData.token,
+      );
+      const result = await getPaymentResult();
 
       console.info('[handleOrderPlaced] Payment result received:', {
         resultCode: result?.resultCode,
@@ -1168,8 +1167,7 @@ export default async function decorate(block) {
 
     // Clear cartId AFTER order success page has been rendered,
     // since donation component initialization needs it
-    lastPlacedOrderCartId = null;
-    window.__adyenCheckoutLastCartId = null;
+    setPlacedOrderCartId(null);
   }
 
   // Show a test mode warning banner for payment methods
@@ -1364,10 +1362,10 @@ export default async function decorate(block) {
   // Only clear if the cart ID has actually changed (new checkout session).
   events.on('cart/initialized', (newCartData) => {
     // Only clear payment result if this is a different cart (new checkout)
-    if (newCartData?.id && newCartData.id !== lastPlacedOrderCartId) {
+    if (newCartData?.id && newCartData.id !== getPlacedOrderCartId()) {
       clearPaymentResult();
       console.debug('[Commerce Checkout] Cleared stale payment result for new cart', {
-        previousCartId: lastPlacedOrderCartId,
+        previousCartId: getPlacedOrderCartId(),
         newCartId: newCartData?.id,
       });
     }
@@ -1382,11 +1380,11 @@ export default async function decorate(block) {
   });
 }
 
-// Export getter for lastPlacedOrderCartId so other components can access it
+// Export getter for the placed order cart so other components can access it
 // Cart ID is needed by order success page for donation component
 // initialization. It's cleared only after success page rendering is complete.
 export function getLastPlacedOrderCartId() {
-  const cartId = window.__adyenCheckoutLastCartId || null;
+  const cartId = getPlacedOrderCartId();
   if (!cartId) {
     console.debug('[Commerce Checkout] getLastPlacedOrderCartId: no cart ID available for donation component');
   }

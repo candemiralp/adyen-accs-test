@@ -88,24 +88,18 @@ This block uses no localStorage keys. -->
 
 ### Payment Method Browser Compatibility
 
-The checkout block conditionally renders payment methods based on browser capabilities:
+Apple Pay and Google Pay are offered in every browser. No user-agent checks hide them: each wallet component's `isAvailable()` decides whether it can be used.
 
 #### Apple Pay
-- **Supported**: Safari only (verified via user agent detection)
-- **Hidden on**: Chrome, Firefox, Edge, Opera (WebKit/Webkit-like browsers that don't support native Apple Pay)
-- **Implementation**: `isApplePaySupportedBrowser()` checks for `/Safari/` in user agent while excluding Chromium-based browsers
+- Adyen Web loads Apple's `apple-pay-sdk.js`, which also runs outside Safari: in Chrome, Firefox or Edge the shopper scans a code with their iPhone.
+- When `isAvailable()` rejects, the checkout block shows "Apple Pay is not available on this device or browser. Please choose another payment method."
 
 #### Google Pay
-- **Supported**: Chrome, Edge, Android browsers only
-- **Hidden on**: Safari, Firefox (these browsers lack Google Pay support)
-- **Implementation**: `isGooglePaySupportedBrowser()` excludes Safari and Firefox via user agent detection
+- Google Pay runs in Chrome, Edge, Safari and Firefox.
+- When `isAvailable()` rejects, the checkout block shows "Google Pay is not available on this device or browser. Please choose another payment method."
 
-#### Mechanism
-- Payment method slots are conditionally **included** with full render functions on supported browsers
-- On unsupported browsers, payment method slots are explicitly set with `enabled: false` to prevent the dropin from rendering them from the backend response
-- This dual-layer approach ensures payment methods never render on incompatible browsers:
-  1. Slot definition layer — conditionally includes render function or explicit disable
-  2. Backend filtering layer — `adyen-payment/index.js` also filters the backend payment methods response
+#### Express blocks
+- The Apple Pay and Google Pay express blocks hide themselves when `isAvailable()` rejects.
 
 ### Error Handling
 

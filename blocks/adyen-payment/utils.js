@@ -80,6 +80,26 @@ export function getAdyenCheckoutFactory() {
   return undefined;
 }
 
+// ISO 4217 minor units, kept identical to the backend's lib/currency.ts so the storefront and the
+// backend always agree on an amount. Every other currency has 2 decimals.
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  'BIF', 'CLP', 'DJF', 'GNF', 'ISK', 'JPY', 'KMF', 'KRW', 'MGA',
+  'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
+]);
+const THREE_DECIMAL_CURRENCIES = new Set(['BHD', 'IQD', 'JOD', 'KWD', 'LYD', 'OMR', 'TND']);
+
+/**
+ * Number of decimal places (minor units) a currency uses
+ * @param {string} currency - Currency code (e.g., 'USD')
+ * @returns {number} 0, 2 or 3
+ */
+export function minorUnitsFor(currency) {
+  const code = String(currency ?? '').toUpperCase();
+  if (ZERO_DECIMAL_CURRENCIES.has(code)) return 0;
+  if (THREE_DECIMAL_CURRENCIES.has(code)) return 3;
+  return 2;
+}
+
 /**
  * Format amount for Adyen (convert to minor units)
  * @param {number} amount - Amount in major units (e.g., 10.50)
@@ -87,20 +107,7 @@ export function getAdyenCheckoutFactory() {
  * @returns {Object} Formatted amount object
  */
 export function formatAmount(amount, currency = 'USD') {
-  // Most currencies use 2 decimal places, but some use 0 or 3
-  const minorUnitsMap = {
-    JPY: 0, // Japanese Yen
-    KRW: 0, // Korean Won
-    CLP: 0, // Chilean Peso
-    BHD: 3, // Bahraini Dinar
-    JOD: 3, // Jordanian Dinar
-    KWD: 3, // Kuwaiti Dinar
-    OMR: 3, // Omani Rial
-    TND: 3, // Tunisian Dinar
-  };
-
-  const minorUnits = minorUnitsMap[currency] ?? 2;
-  const value = Math.round(amount * 10 ** minorUnits);
+  const value = Math.round(amount * 10 ** minorUnitsFor(currency));
 
   return {
     value,
@@ -115,19 +122,7 @@ export function formatAmount(amount, currency = 'USD') {
  */
 export function parseAmount(amountObject) {
   const { value, currency } = amountObject;
-  const minorUnitsMap = {
-    JPY: 0,
-    KRW: 0,
-    CLP: 0,
-    BHD: 3,
-    JOD: 3,
-    KWD: 3,
-    OMR: 3,
-    TND: 3,
-  };
-
-  const minorUnits = minorUnitsMap[currency] ?? 2;
-  return value / 10 ** minorUnits;
+  return value / 10 ** minorUnitsFor(currency);
 }
 
 /**

@@ -17,8 +17,10 @@ import { getStoreConfigCache } from '@dropins/storefront-checkout/api.js';
 import { getConfigValue } from '@dropins/tools/lib/aem/configs.js';
 import { loadCSS } from '../../scripts/aem.js';
 
-import { getAdyenCheckoutFactory, loadAdyenWebSDK } from './utils.js';
+import { formatAmount, getAdyenCheckoutFactory, loadAdyenWebSDK } from './utils.js';
 import { adyenFetch } from '../../scripts/adyen-auth.js';
+import { getUserTokenCookie } from '../../scripts/initializers/index.js';
+import { rootLink, CUSTOMER_LOGIN_PATH } from '../../scripts/commerce.js';
 
 import {
   clearCheckoutAttemptId,
@@ -32,6 +34,7 @@ import {
   getCheckoutAttemptId,
   getPaymentResult,
   getPaymentResultSync,
+  getCompletedPaymentResultForCart,
   getPendingOrderData,
   setPendingOrderData,
   getPreviousOrderData,
@@ -40,6 +43,10 @@ import {
   clearRedirectPaymentCode,
   setExtraPaymentParams,
   getExtraPaymentParams,
+  setPlacedOrderCartId,
+  getPlacedOrderCartId,
+  setCheckoutFormsValidator,
+  validateCheckoutForms,
 } from './state.js';
 
 import {
@@ -67,89 +74,12 @@ import {
   getWithExpiry,
 } from './storage.js';
 
-// ============================================================================
-// BROWSER DETECTION & PAYMENT METHOD FILTERING
-// ============================================================================
-
-/**
- * Detects if the current browser is Safari
- * @returns {boolean} true if running on Safari
- */
-function isSafari() {
-  const ua = window.navigator.userAgent;
-  // Safari user agent contains "Safari" but not "Chrome", "Firefox", "Edge"
-  return /Safari/.test(ua) && !/Chrome|Firefox|Edge|OPR/.test(ua);
-}
-
-/**
- * Detects if the current browser supports Google Pay
- * Google Pay is available on Chrome, Edge, and Android browsers,
- * but NOT on Safari or Firefox
- * @returns {boolean} true if running on a browser that supports Google Pay
- */
-function isGooglePaySupported() {
-  const ua = window.navigator.userAgent;
-  // Safari: contains "Safari" but not "Chrome", "Firefox", "Edge"
-  const isSafariCheck = /Safari/.test(ua) && !/Chrome|Firefox|Edge|OPR/.test(ua);
-  // Firefox
-  const isFirefox = /Firefox/.test(ua);
-
-  return !isSafariCheck && !isFirefox;
-}
-
-/**
- * Filters payment methods based on browser capabilities.
- * Removes Apple Pay on non-Safari browsers and Google Pay on Safari/Firefox.
- * @param {object} paymentMethodsResponse - The payment methods response from backend
- * @returns {object} Filtered payment methods response
- */
-function filterPaymentMethodsByBrowser(paymentMethodsResponse) {
-  if (!paymentMethodsResponse || !paymentMethodsResponse.paymentMethods) {
-    return paymentMethodsResponse;
-  }
-
-  const safariSupport = isSafari();
-  const googlePaySupport = isGooglePaySupported();
-
-  console.debug('[ADYEN-PAYMENT] Filtering payment methods', {
-    isSafari: safariSupport,
-    googlePaySupported: googlePaySupport,
-    originalCount: paymentMethodsResponse.paymentMethods.length,
-    originalTypes: paymentMethodsResponse.paymentMethods.map((pm) => pm.type),
-  });
-
-  // Filter out unsupported payment methods
-  const filtered = {
-    ...paymentMethodsResponse,
-    paymentMethods: paymentMethodsResponse.paymentMethods.filter((pm) => {
-      // Remove Apple Pay on non-Safari
-      if (pm.type === 'applepay' && !safariSupport) {
-        console.debug('[ADYEN-PAYMENT] Filtering out Apple Pay (not Safari)');
-        return false;
-      }
-      // Remove Google Pay on Safari/Firefox
-      if (pm.type === 'googlepay' && !googlePaySupport) {
-        console.debug('[ADYEN-PAYMENT] Filtering out Google Pay (Safari/Firefox)');
-        return false;
-      }
-      return true;
-    }),
-  };
-
-  console.debug('[ADYEN-PAYMENT] Filtered payment methods', {
-    filteredCount: filtered.paymentMethods.length,
-    filteredTypes: filtered.paymentMethods.map((pm) => pm.type),
-  });
-  console.debug('[ADYEN-PAYMENT] Filtered response object:', filtered);
-
-  return filtered;
-}
-
 // Re-export state management functions
 export {
   setPaymentResult,
   getPaymentResult,
   getPaymentResultSync,
+  getCompletedPaymentResultForCart,
   clearPaymentResult,
   setPendingOrderData,
   getPendingOrderData,
@@ -165,6 +95,10 @@ export {
   clearRedirectPaymentCode,
   setExtraPaymentParams,
   getExtraPaymentParams,
+  setPlacedOrderCartId,
+  getPlacedOrderCartId,
+  setCheckoutFormsValidator,
+  validateCheckoutForms,
 };
 
 // Re-export handler utilities
@@ -450,6 +384,81 @@ export function fetchOrderResult(incrementId, email, passedCartId, orderToken) {
   });
 }
 
+function savePendingRecovery(pending) {
+  try {
+    sessionStorage.setItem(STORAGE_KEYS.PENDING_RECOVERY, JSON.stringify(pending));
+  } catch {
+    // Ignore sessionStorage errors
+  }
+}
+
+function readPendingRecovery() {
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEYS.PENDING_RECOVERY);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearPendingRecovery() {
+  try {
+    sessionStorage.removeItem(STORAGE_KEYS.PENDING_RECOVERY);
+  } catch {
+    // Ignore sessionStorage errors
+  }
+}
+
+/**
+ * Finish a cart recovery that recover-cart refused until the customer signed in.
+ * Call on checkout load. Signed out: sends the shopper to sign in once, returning
+ * to checkout. Signed in: replays the recovery with the customer token and reloads
+ * onto the recovered cart.
+ *
+ * @param {Object} [nav] - Navigation hooks (tests replace these)
+ * @param {Function} [nav.navigate] - Go to a URL
+ * @param {Function} [nav.reload] - Reload the page
+ * @returns {Promise<boolean>} true when it navigated away and the caller should stop
+ */
+export async function resumePendingRecovery({
+  navigate = (url) => { window.location.href = url; },
+  reload = () => window.location.reload(),
+} = {}) {
+  const pending = readPendingRecovery();
+  if (!pending) return false;
+
+  if (!getUserTokenCookie()) {
+    if (pending.promptedSignIn) {
+      // Sent to sign in once already and came back without doing so; do not loop.
+      clearPendingRecovery();
+      return false;
+    }
+    savePendingRecovery({ ...pending, promptedSignIn: true });
+    navigate(`${rootLink(CUSTOMER_LOGIN_PATH)}?returnTo=${encodeURIComponent(rootLink('/checkout'))}`);
+    return true;
+  }
+
+  clearPendingRecovery();
+  try {
+    // recoverCart sends the cart that produced the order from the stored payment result.
+    setPaymentResult({ ...(getPaymentResultSync() || {}), cartId: pending.cartId });
+    const newCartId = await recoverCart(pending.incrementId, pending.email, pending.resultCode, {
+      orderToken: pending.orderToken,
+      orderId: pending.orderId,
+      comment: pending.comment,
+    });
+    // One replay only: a second login_required (e.g. signed in to a different account) is final.
+    clearPendingRecovery();
+    if (newCartId) {
+      reload();
+      return true;
+    }
+  } catch (err) {
+    console.error('[resumePendingRecovery] Recovery after sign-in failed:', err);
+  }
+  return false;
+}
+
 /**
  * Call the backend recover-cart endpoint to create a new Commerce cart after
  * a payment failure.  Updates the stored payment result with the new cartId.
@@ -508,9 +517,33 @@ export async function recoverCart(incrementId, email, resultCode, extra = {}) {
       {
         backendUrl,
         cartId: paymentResultData.cartId,
-        isGuest: checkoutData.isGuest,
+        // A signed-in shopper must send their customer token: the backend only lets a customer
+        // order be recovered by its own account. The checkout context can already read as guest
+        // here (it resets after placeOrder), so go by the auth cookie as well.
+        isGuest: !!checkoutData?.isGuest && !getUserTokenCookie(),
       },
     );
+
+    if (response.status === 403 || response.status === 401) {
+      const body = await response.json().catch(() => ({}));
+      // The backend answers 403 { error: 'login_required' }; older backends sent
+      // 401 { reason: 'login_required' }, accepted so the two can deploy in either order.
+      if (body?.error === 'login_required' || body?.reason === 'login_required') {
+        // The order belongs to a customer account. Keep what is needed to retry, and let
+        // checkout send the shopper to sign in (see resumePendingRecovery).
+        console.warn('[recoverCart] recover-cart requires the customer to sign in');
+        savePendingRecovery({
+          incrementId,
+          email,
+          resultCode,
+          orderToken,
+          orderId,
+          comment,
+          cartId: paymentResultData.cartId,
+        });
+        return null;
+      }
+    }
 
     if (!response.ok) {
       console.error(`[recoverCart] recover-cart failed with status ${response.status}`);
@@ -584,10 +617,10 @@ export async function fetchPreAuthPayment(
   const backendUrl = getBackendIntegrationUrl(checkout);
   const endpoint = `${backendUrl.replace(/\/$/, '')}/pre-auth-payments`;
 
-  const amount = {
-    value: Math.round((cart.total?.includingTax?.value || 0) * 100),
-    currency: cart.total?.includingTax?.currency || 'USD',
-  };
+  const amount = formatAmount(
+    cart.total?.includingTax?.value || 0,
+    cart.total?.includingTax?.currency || 'USD',
+  );
 
   const billingAddress = checkout.billingAddress
     ? {
@@ -722,12 +755,9 @@ export async function restoreFromSnapshot() {
   await loadAdyenSDK(publicConfig.environment);
 
   // Build configuration directly — no cartData/checkoutData needed
-  // Filter payment methods based on browser capabilities before restoring
-  const filteredSnapshot = filterPaymentMethodsByBrowser(snapshot.paymentMethodsResponse);
-
   configuration = {
     ...snapshot.staticConfig,
-    paymentMethodsResponse: filteredSnapshot,
+    paymentMethodsResponse: snapshot.paymentMethodsResponse,
     amount: snapshot.amount,
     onSubmit: () => {},
     onAdditionalDetails: () => {},
@@ -1004,7 +1034,10 @@ async function tryInitialize() {
 
     // Build cache key for payment methods
     console.debug('[ADYEN-PAYMENT] Building payment methods cache key...');
-    const amount = Math.round((cartData.total?.includingTax?.value || 0) * 100);
+    const amount = formatAmount(
+      cartData.total?.includingTax?.value || 0,
+      cartData.total?.includingTax?.currency || 'USD',
+    ).value;
     const paymentMethodsCacheKey = buildPaymentMethodsCacheKey(
       staticConfig.countryCode,
       amount,
@@ -1070,14 +1103,11 @@ async function tryInitialize() {
     // Build full configuration
     console.debug('[ADYEN-PAYMENT] Building base configuration...');
 
-    // Filter payment methods based on browser capabilities
-    const filteredPaymentMethods = filterPaymentMethodsByBrowser(paymentMethods);
-
     configuration = buildBaseConfiguration({
       publicCfg: publicConfig,
       checkoutData,
       cartData,
-      paymentMethods: filteredPaymentMethods,
+      paymentMethods,
       onSubmit: createDefaultOnSubmit(
         backendUrl,
         () => cartData,
@@ -1256,7 +1286,10 @@ async function updateCheckoutInstance() {
     });
 
     // Build cache key
-    const amount = Math.round((cartData.total?.includingTax?.value || 0) * 100);
+    const amount = formatAmount(
+      cartData.total?.includingTax?.value || 0,
+      cartData.total?.includingTax?.currency || 'USD',
+    ).value;
     const paymentMethodsCacheKey = buildPaymentMethodsCacheKey(
       staticConfig.countryCode,
       amount,

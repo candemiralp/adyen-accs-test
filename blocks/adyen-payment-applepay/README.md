@@ -7,7 +7,7 @@ Renders the Adyen Apple Pay Web Component inside the EDS checkout. Integrates wi
 1. Awaits the shared `getAdyenCheckout()` singleton and `getAdyenConfiguration()` from `../adyen-payment/index.js`.
 2. Looks up the `applepay` entry in `configuration.paymentMethodsResponse.paymentMethods`. If not found, throws — Apple Pay is not configured for this merchant or country.
 3. Instantiates `window.AdyenWeb.ApplePay` with the merchant configuration from the payment methods response.
-4. Calls `paymentMethod.isAvailable()` to check device and browser support (requires HTTPS and a Safari/WebKit context). Only mounts if the promise resolves.
+4. Calls `paymentMethod.isAvailable()` to check device and browser support (requires HTTPS). Only mounts if the promise resolves; otherwise tells the shopper to choose another payment method. There is no user-agent check.
 5. Calls `setActiveComponent(paymentMethod)` so the checkout block can orchestrate submission.
 
 ## Block structure
@@ -21,7 +21,7 @@ blocks/adyen-payment-applepay/
 ## Requirements
 
 - **HTTPS only**: Apple Pay is unavailable on plain HTTP origins.
-- **Safari / WebKit**: Apple Pay is only available in Safari on macOS/iOS and in other browsers on iOS via WebKit.
+- **Any browser**: Apple Pay runs natively in Safari; in Chrome, Firefox and Edge Apple's SDK shows a code the shopper scans with their iPhone.
 - **Domain registration**: The storefront domain must be registered in Adyen Customer Area under Apple Pay domain registration.
 - **Merchant configuration**: The `applepay` payment method must be returned by the backend `payments-methods` endpoint for the shopper's country.
 

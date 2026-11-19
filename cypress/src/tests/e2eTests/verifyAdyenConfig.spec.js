@@ -64,11 +64,13 @@ function visitAndExposeConfig() {
       const cached = storageGetWithExpiry(STORAGE_KEYS.INTEGRATION_URL);
       if (cached && !cached.expired) return cached.value;
 
-      const integrationUrl = checkoutData
-        ?.availablePaymentMethods
-        ?.find((m) => m.code?.startsWith('adyen_'))
-        ?.oope_payment_method_config
-        ?.backend_integration_url;
+      const methods = checkoutData?.availablePaymentMethods;
+      const integrationUrl = Array.isArray(methods)
+        ? methods
+          .filter((m) => m.code?.startsWith('adyen_'))
+          .map((m) => m.oope_payment_method_config?.backend_integration_url)
+          .find(Boolean)
+        : undefined;
 
       if (integrationUrl) {
         storageSetWithExpiry(STORAGE_KEYS.INTEGRATION_URL, integrationUrl, STORAGE_TTL.INTEGRATION_URL);
@@ -129,6 +131,18 @@ function visitAndExposeConfig() {
 function checkoutDataWithUrl(url) {
   return {
     availablePaymentMethods: [
+      {
+        code: 'adyen_card',
+        oope_payment_method_config: { backend_integration_url: url },
+      },
+    ],
+  };
+}
+
+function checkoutDataWithUnconfiguredAdyenFirst(url) {
+  return {
+    availablePaymentMethods: [
+      { code: 'adyen_unconfigured' },
       {
         code: 'adyen_card',
         oope_payment_method_config: { backend_integration_url: url },
@@ -244,6 +258,15 @@ describe('getBackendIntegrationUrl – returns undefined when no adyen payment m
     cy.window().then((win) => {
       const result = win.__getBackendIntegrationUrl(null);
       expect(result).to.be.undefined;
+    });
+  });
+
+  it('skips an adyen_ method with no OOPE config and uses the next one that has a URL', () => {
+    cy.window().then((win) => {
+      const result = win.__getBackendIntegrationUrl(
+        checkoutDataWithUnconfiguredAdyenFirst('https://backend.example.com/api/v1/web/adyen/'),
+      );
+      expect(result).to.eq('https://backend.example.com/api/v1/web/adyen/');
     });
   });
 });

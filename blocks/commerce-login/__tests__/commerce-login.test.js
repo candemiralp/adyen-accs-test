@@ -6,7 +6,7 @@
 import { render as authRenderer } from '@dropins/storefront-auth/render.js';
 import { SignIn } from '@dropins/storefront-auth/containers/SignIn.js';
 import { checkIsAuthenticated } from '../../../scripts/commerce.js';
-import decorate from '../commerce-login.js';
+import decorate, { getSignInDestination } from '../commerce-login.js';
 
 jest.mock('@dropins/storefront-auth/render.js', () => {
   const renderMethod = jest.fn((_container, _config) => jest.fn((_block) => Promise.resolve()));
@@ -348,6 +348,39 @@ describe('Commerce Login Block', () => {
 
       const renderFn = authRenderer.render.mock.results[0].value;
       expect(renderFn).toHaveBeenCalledWith(block);
+    });
+  });
+
+  describe('Sign-in destination (returnTo)', () => {
+    function visit(search) {
+      window.history.pushState({}, '', `/customer/login${search}`);
+    }
+
+    afterEach(() => {
+      window.history.pushState({}, '', '/');
+    });
+
+    it('returns to a path on this site after sign-in', async () => {
+      visit('?returnTo=%2Fcheckout');
+      await decorate(block);
+
+      const config = authRenderer.render.mock.calls[0][1];
+      expect(config.routeRedirectOnSignIn()).toBe('/checkout');
+    });
+
+    it('falls back to the account page without returnTo', () => {
+      visit('');
+      expect(getSignInDestination()).toBe('/account');
+    });
+
+    it.each([
+      ['a protocol-relative URL', '//evil.example.com/checkout'],
+      ['an absolute URL', 'https://evil.example.com/checkout'],
+      ['a backslash trick', '/\\evil.example.com'],
+      ['a javascript: URL', 'javascript:alert(1)'],
+    ])('ignores %s', (_label, returnTo) => {
+      visit(`?returnTo=${encodeURIComponent(returnTo)}`);
+      expect(getSignInDestination()).toBe('/account');
     });
   });
 });

@@ -32,8 +32,12 @@ import createModal from '../modal/modal.js';
 import '../../scripts/initializers/cart.js';
 import '../../scripts/initializers/wishlist.js';
 
-import { readBlockConfig } from '../../scripts/aem.js';
-import { fetchPlaceholders, rootLink, getProductLink } from '../../scripts/commerce.js';
+import { readBlockConfig, loadCSS } from '../../scripts/aem.js';
+import {
+  fetchPlaceholders,
+  rootLink,
+  getProductLink,
+} from '../../scripts/commerce.js';
 
 export default async function decorate(block) {
   // Configuration
@@ -67,6 +71,12 @@ export default async function decorate(block) {
       </div>
       <div class="cart__right-column">
         <div class="cart__order-summary"></div>
+        <div class="cart__express-checkout">
+          <div class="cart__express-checkout-divider">
+            <span>or</span>
+          </div>
+          <div class="cart__express-checkout-buttons"></div>
+        </div>
         <div class="cart__gift-options"></div>
       </div>
     </div>
@@ -81,6 +91,10 @@ export default async function decorate(block) {
   const $emptyCart = fragment.querySelector('.cart__empty-cart');
   const $giftOptions = fragment.querySelector('.cart__gift-options');
   const $rightColumn = fragment.querySelector('.cart__right-column');
+  const $expressCheckout = fragment.querySelector('.cart__express-checkout');
+  const $expressButtons = fragment.querySelector(
+    '.cart__express-checkout-buttons',
+  );
 
   block.innerHTML = '';
   block.appendChild(fragment);
@@ -147,7 +161,7 @@ export default async function decorate(block) {
 
       currentModal.showModal();
     } catch (error) {
-      console.error('Error opening mini PDP modal:', error);
+      console.debug('Error opening mini PDP modal:', error);
 
       // Clear any existing notifications
       currentNotification?.remove();
@@ -174,7 +188,9 @@ export default async function decorate(block) {
     provider.render(CartSummaryList, {
       hideHeading: hideHeading === 'true',
       routeProduct: createProductLink,
-      routeEmptyCartCTA: startShoppingURL ? () => rootLink(startShoppingURL) : undefined,
+      routeEmptyCartCTA: startShoppingURL
+        ? () => rootLink(startShoppingURL)
+        : undefined,
       maxItems: parseInt(maxItems, 10) || undefined,
       attributesToHide: hideAttributes
         .split(',')
@@ -202,15 +218,15 @@ export default async function decorate(block) {
 
         Footer: (ctx) => {
           // Edit Link
-          if (ctx.item?.itemType === 'ConfigurableCartItem' && enableUpdatingProduct === 'true') {
+          if (
+            ctx.item?.itemType === 'ConfigurableCartItem'
+            && enableUpdatingProduct === 'true'
+          ) {
             const editLink = document.createElement('div');
             editLink.className = 'cart-item-edit-link';
 
             UI.render(Button, {
               children: placeholders?.Global?.CartEditButton,
-              // Every cart item renders its own Edit button, so the accessible
-              // name must include the product name to distinguish them.
-              'aria-label': `${placeholders?.Global?.CartEditButton} ${ctx.item.name}`,
               variant: 'tertiary',
               size: 'medium',
               icon: h(Icon, { source: 'Edit' }),
@@ -256,6 +272,7 @@ export default async function decorate(block) {
 
     // Order Summary
     provider.render(OrderSummary, {
+      routeProduct: createProductLink,
       routeCheckout: checkoutURL ? () => rootLink(checkoutURL) : undefined,
       slots: {
         EstimateShipping: async (ctx) => {
@@ -291,6 +308,71 @@ export default async function decorate(block) {
       },
     })($giftOptions),
   ]);
+
+  // Load express checkout wallet buttons into the right column below the Checkout button.
+  // Initialization is fire-and-forget: the main cart dropin has already rendered above,
+  // and we must not block decorate() (and therefore AEM's loadBlock pipeline) on wallet
+  // availability checks (isAvailable() can take several seconds). Buttons appear below
+  // the order summary once each wallet confirms it is available.
+  // CSS is loaded explicitly here because dynamic import bypasses AEM's loadBlock, which
+  // is normally responsible for injecting a block's stylesheet.
+  const expressBlockNames = [
+    'adyen-payment-applepay-express',
+    'adyen-payment-googlepay-express',
+    'adyen-payment-paypal-express',
+  ];
+
+  // Hide the express section until at least one button renders; show/hide after settle.
+  $expressCheckout.style.display = 'none';
+
+  // Show a skeleton while wallet availability is checked (isAvailable() takes ~1-3s).
+  // The entire express section is hidden until buttons settle, but the skeleton gives
+  // the right-column the correct height so the layout does not shift when buttons appear.
+  // We show it here by making the express section visible with just the skeleton inside.
+  const expressSkeletonEl = document.createElement('div');
+  expressSkeletonEl.className = 'cart__express-checkout-skeleton';
+  for (let i = 0; i < expressBlockNames.length; i += 1) {
+    const item = document.createElement('div');
+    item.className = 'cart__express-checkout-skeleton__item';
+    expressSkeletonEl.appendChild(item);
+  }
+  $expressButtons.appendChild(expressSkeletonEl);
+  $expressCheckout.style.display = '';
+
+  Promise.allSettled(
+    expressBlockNames.map(async (blockName) => {
+      try {
+        const cssPath = `${window.hlx?.codeBasePath ?? ''}/blocks/${blockName}/${blockName}.css`;
+        const [{ default: decorateExpressBlock }] = await Promise.all([
+          import(`../${blockName}/${blockName}.js`),
+          loadCSS(cssPath),
+        ]);
+        const blockEl = document.createElement('div');
+        blockEl.className = `block ${blockName}`;
+        blockEl.dataset.blockName = blockName;
+        $expressButtons.appendChild(blockEl);
+        await decorateExpressBlock(blockEl);
+        // If the block hid itself (wallet unavailable / empty cart), remove its container too
+        if (blockEl.style.display === 'none') {
+          blockEl.remove();
+        }
+      } catch (err) {
+        console.debug(
+          `[commerce-cart] Failed to load express block ${blockName}:`,
+          err,
+        );
+      }
+    }),
+  ).then(() => {
+    // Remove the skeleton regardless of outcome.
+    expressSkeletonEl.remove();
+    // Show the express section only if at least one wallet button rendered.
+    if ($expressButtons.children.length) {
+      $expressCheckout.style.display = '';
+    } else {
+      $expressCheckout.style.display = 'none';
+    }
+  });
 
   let cartViewEventPublished = false;
   // Events

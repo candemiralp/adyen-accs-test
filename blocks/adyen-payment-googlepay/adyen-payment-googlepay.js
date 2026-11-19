@@ -20,6 +20,7 @@ import {
 import {
   getAdyenCheckout,
   setActiveComponent,
+  validateCheckoutForms,
 } from '../adyen-payment/index.js';
 
 export default async function decorate(block) {
@@ -33,13 +34,20 @@ export default async function decorate(block) {
     const checkout = await getAdyenCheckout();
     const paymentMethod = new window.AdyenWeb.GooglePay(checkout, {
       showPayButton: true,
+      // Validate the checkout forms before the Google Pay sheet opens.
+      onClick: (resolve, reject) => (validateCheckoutForms() ? resolve() : reject()),
       onPaymentFailed: () => showError(container, 'Payment failed. Please try again.'),
       onError: (error) => showError(container, error.message || 'An error occurred.'),
     });
 
     clearError(container);
-    paymentMethod.mount(container);
-    setActiveComponent(paymentMethod);
+    // Google Pay is not hidden by browser: isAvailable() decides whether it can be used here.
+    paymentMethod.isAvailable().then(() => {
+      paymentMethod.mount(container);
+      setActiveComponent(paymentMethod);
+    }).catch(() => {
+      showError(container, 'Google Pay is not available on this device or browser. Please choose another payment method.');
+    });
   } catch (error) {
     console.debug('Failed to initialize payment method:', error);
     showError(

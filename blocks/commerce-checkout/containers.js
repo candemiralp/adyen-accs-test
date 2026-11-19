@@ -81,27 +81,6 @@ import {
   rootLink,
 } from '../../scripts/commerce.js';
 
-// Browser compatibility check for Apple Pay
-function isApplePaySupportedBrowser() {
-  const ua = window.navigator.userAgent;
-  return /Safari/.test(ua) && !/Chrome|Firefox|Edge|OPR/.test(ua);
-}
-
-// Browser compatibility check for Google Pay
-function isGooglePaySupportedBrowser() {
-  const ua = window.navigator.userAgent;
-  // Google Pay is available on Chrome, Edge, and Android browsers,
-  // but NOT on Safari or Firefox
-  const isSafari = /Safari/.test(ua) && !/Chrome|Firefox|Edge|OPR/.test(ua);
-  const isFirefox = /Firefox/.test(ua);
-
-  return !isSafari && !isFirefox;
-}
-
-// Log browser support on init
-console.debug('[checkout] Apple Pay browser support:', isApplePaySupportedBrowser());
-console.debug('[checkout] Google Pay browser support:', isGooglePaySupportedBrowser());
-
 // ponytail: Import throttle to avoid CDN 429 rate limits when multiple payment
 // method renderers fire dynamic imports in parallel. Queues imports with 100ms spacing.
 // Includes exponential backoff retry on 429 (Too Many Requests).
@@ -769,73 +748,60 @@ function buildPaymentMethodsSlots() {
     },
   };
 
-  // Only include Google Pay slot on supported browsers (Chrome, Edge, Android)
-  // On unsupported browsers (Safari/Firefox), explicitly disable it
-  if (isGooglePaySupportedBrowser()) {
-    methods.adyen_googlepay = {
-      icon: `${window.location.origin}/blocks/adyen-payment-googlepay/googlepay.svg`,
-      render: async (ctx) => {
-        // Check if already rendered to prevent loops
-        const existingContainer = document.querySelector(
-          '.checkout__adyen-googlepay',
-        );
-        if (existingContainer && existingContainer.hasChildNodes()) {
-          return;
-        }
+  // Google Pay is offered in every browser: it runs in Safari and Firefox too. The block itself
+  // checks isAvailable() and tells the shopper when Google Pay cannot be used here.
+  methods.adyen_googlepay = {
+    icon: `${window.location.origin}/blocks/adyen-payment-googlepay/googlepay.svg`,
+    render: async (ctx) => {
+      // Check if already rendered to prevent loops
+      const existingContainer = document.querySelector(
+        '.checkout__adyen-googlepay',
+      );
+      if (existingContainer && existingContainer.hasChildNodes()) {
+        return;
+      }
 
-        const $methodContentBlock = document.createElement('div');
+      const $methodContentBlock = document.createElement('div');
 
-        // Dynamically import payment method decorator
-        const { default: decorateMethod } = await queueDynamicImport(
-          '../adyen-payment-googlepay/adyen-payment-googlepay.js',
-        );
+      // Dynamically import payment method decorator
+      const { default: decorateMethod } = await queueDynamicImport(
+        '../adyen-payment-googlepay/adyen-payment-googlepay.js',
+      );
 
-        // Decorate and render the payment method
-        $methodContentBlock.className = 'checkout__adyen-googlepay';
-        await decorateMethod($methodContentBlock);
-        ctx.replaceHTML($methodContentBlock);
-      },
-    };
-  } else {
-    // On Safari/Firefox, explicitly disable Google Pay to prevent default rendering
-    methods.adyen_googlepay = {
-      enabled: false,
-    };
-  }
+      // Decorate and render the payment method
+      $methodContentBlock.className = 'checkout__adyen-googlepay';
+      await decorateMethod($methodContentBlock);
+      ctx.replaceHTML($methodContentBlock);
+    },
+  };
 
-  // Only include Apple Pay slot on Safari browsers
-  // On non-Safari browsers, explicitly disable it to prevent default rendering
-  if (isApplePaySupportedBrowser()) {
-    methods.adyen_applepay = {
-      icon: `${window.location.origin}/blocks/adyen-payment-applepay/applepay.svg`,
-      render: async (ctx) => {
-        // Check if already rendered to prevent loops
-        const existingContainer = document.querySelector(
-          '.checkout__adyen-applepay',
-        );
-        if (existingContainer && existingContainer.hasChildNodes()) {
-          return;
-        }
+  // Apple Pay is offered in every browser: Adyen Web loads Apple's SDK, which also runs
+  // outside Safari (the shopper scans a code with their iPhone). The block itself checks
+  // isAvailable() and tells the shopper when Apple Pay cannot be used here.
+  methods.adyen_applepay = {
+    icon: `${window.location.origin}/blocks/adyen-payment-applepay/applepay.svg`,
+    render: async (ctx) => {
+      // Check if already rendered to prevent loops
+      const existingContainer = document.querySelector(
+        '.checkout__adyen-applepay',
+      );
+      if (existingContainer && existingContainer.hasChildNodes()) {
+        return;
+      }
 
-        const $methodContentBlock = document.createElement('div');
+      const $methodContentBlock = document.createElement('div');
 
-        // Dynamically import payment method decorator
-        const { default: decorateMethod } = await queueDynamicImport(
-          '../adyen-payment-applepay/adyen-payment-applepay.js',
-        );
+      // Dynamically import payment method decorator
+      const { default: decorateMethod } = await queueDynamicImport(
+        '../adyen-payment-applepay/adyen-payment-applepay.js',
+      );
 
-        // Decorate and render the payment method
-        $methodContentBlock.className = 'checkout__adyen-applepay';
-        await decorateMethod($methodContentBlock);
-        ctx.replaceHTML($methodContentBlock);
-      },
-    };
-  } else {
-    // On non-Safari browsers, explicitly disable Apple Pay to prevent default rendering
-    methods.adyen_applepay = {
-      enabled: false,
-    };
-  }
+      // Decorate and render the payment method
+      $methodContentBlock.className = 'checkout__adyen-applepay';
+      await decorateMethod($methodContentBlock);
+      ctx.replaceHTML($methodContentBlock);
+    },
+  };
 
   return methods;
 }

@@ -8,6 +8,7 @@ import { getStoreConfigCache } from '@dropins/storefront-checkout/api.js';
 import { fetchGraphQl } from '@dropins/storefront-cart/api.js';
 
 import { events } from '@dropins/tools/event-bus.js';
+import { getConfigValue } from '@dropins/tools/lib/aem/configs.js';
 import {
   STORAGE_KEYS,
   STORAGE_TTL,
@@ -18,16 +19,29 @@ import {
 import { formatAmount } from './utils.js';
 import { adyenFetch } from '../../scripts/adyen-auth.js';
 
-/**
- * Fallback backend URL used when Commerce SaaS does not surface OOPE payment
- * methods on the cart (e.g. no shipping method set yet, or sandbox config gap).
- * This is the known App Builder runtime endpoint for this project.
- */
-const ADYEN_BACKEND_URL_FALLBACK = 'https://35582-adyen-saas.adobeioruntime.net/api/v1/web/adyen/';
-
 // ============================================================================
 // BACKEND INTEGRATION URL
 // ============================================================================
+
+/**
+ * Pick the backend integration URL out of a Commerce payment method list.
+ *
+ * Scans for the first `adyen_` method that actually carries a URL, rather than
+ * reading it off whichever `adyen_` method happens to sort first. A merchant can
+ * have a dozen Adyen methods registered, and a single one lacking an OOPE config
+ * would otherwise mask a perfectly good URL further down the list.
+ *
+ * @param {Array} methods - Commerce `available_payment_methods` entries
+ * @returns {string|undefined}
+ */
+function pickBackendIntegrationUrl(methods) {
+  if (!Array.isArray(methods)) return undefined;
+
+  return methods
+    .filter((m) => m.code?.startsWith('adyen_'))
+    .map((m) => m.oope_payment_method_config?.backend_integration_url)
+    .find(Boolean);
+}
 
 /**
  * Get the backend integration URL from cache or checkout data.
@@ -42,7 +56,9 @@ export function getBackendIntegrationUrl(checkoutData) {
   }
 
   // Extract from checkout data
-  const integrationUrl = checkoutData?.availablePaymentMethods?.find((m) => m.code?.startsWith('adyen_'))?.oope_payment_method_config?.backend_integration_url;
+  const integrationUrl = pickBackendIntegrationUrl(
+    checkoutData?.availablePaymentMethods,
+  );
 
   if (integrationUrl) {
     setWithExpiry(
@@ -89,8 +105,7 @@ export async function fetchBackendIntegrationUrl(cartId, isGuest) {
       ? result?.data?.cart?.available_payment_methods
       : result?.data?.customerCart?.available_payment_methods;
 
-    const integrationUrl = methods?.find((m) => m.code?.startsWith('adyen_'))
-      ?.oope_payment_method_config?.backend_integration_url;
+    const integrationUrl = pickBackendIntegrationUrl(methods);
 
     if (integrationUrl) {
       setWithExpiry(
@@ -111,14 +126,21 @@ export async function fetchBackendIntegrationUrl(cartId, isGuest) {
  * Resolve the backend integration URL using a three-tier strategy:
  *   1. localStorage cache (populated when shopper previously visited checkout)
  *   2. Commerce GraphQL — available_payment_methods on the cart
- *   3. Hardcoded project fallback — always available, no external dependency
+ *   3. `adyen-backend-integration` in the site's config.json, or `adyen-backend-url`,
+ *      the key existing storefront configurations already carry
  *
  * Tier 3 means express checkout works even when Commerce SaaS does not surface
  * OOPE payment methods on the cart query (e.g. before a shipping method is set).
+ * It must come from the site's own configuration: a build-time constant here
+ * would point every storefront at whichever namespace happened to be committed,
+ * sending one merchant's shopper traffic to another merchant's backend.
+ *
+ * Returns undefined when no tier resolves — callers skip rendering rather than
+ * calling an arbitrary origin.
  *
  * @param {string} cartId
  * @param {boolean} isGuest
- * @returns {Promise<string>}
+ * @returns {Promise<string|undefined>}
  */
 export async function resolveBackendUrl(cartId, isGuest) {
   const cached = getBackendIntegrationUrl(null);
@@ -127,7 +149,16 @@ export async function resolveBackendUrl(cartId, isGuest) {
   const fromGraphQL = await fetchBackendIntegrationUrl(cartId, isGuest);
   if (fromGraphQL) return fromGraphQL;
 
-  return ADYEN_BACKEND_URL_FALLBACK;
+  const configured = getConfigValue('adyen-backend-integration')
+    || getConfigValue('adyen-backend-url');
+  if (!configured) {
+    console.warn(
+      '[adyen] No backend integration URL: Commerce returned no OOPE '
+      + 'backend_integration_url for this cart and neither "adyen-backend-integration" '
+      + 'nor "adyen-backend-url" is set in config.json. Express payment methods will not render.',
+    );
+  }
+  return configured;
 }
 
 // ============================================================================
@@ -136,7 +167,9 @@ export async function resolveBackendUrl(cartId, isGuest) {
 
 /**
  * Fetch public configuration from the backend.
- * Results are cached for 24 hours.
+ * A usable configuration (a successful response carrying a clientKey) is cached for 24 hours.
+ * An error response is returned but never cached, so one failed request cannot leave the
+ * shopper without a working configuration for a day.
  * @param {string} backendUrl
  * @param {string} scope
  * @param {boolean} isGuest
@@ -145,12 +178,12 @@ export async function resolveBackendUrl(cartId, isGuest) {
 export async function fetchPublicConfiguration(backendUrl, scope, _shopperId, isGuest) {
   const cached = getWithExpiry(STORAGE_KEYS.PUBLIC_CONFIG);
 
-  if (cached && !cached.expired) {
+  if (cached && !cached.expired && cached.value?.clientKey) {
     return cached.value;
   }
 
-  // Clear expired cache
-  if (cached?.expired) {
+  // Clear an expired or unusable cache entry (e.g. an error body cached by an earlier version)
+  if (cached) {
     removeItem(STORAGE_KEYS.PUBLIC_CONFIG);
   }
 
@@ -164,11 +197,13 @@ export async function fetchPublicConfiguration(backendUrl, scope, _shopperId, is
 
   const publicConfiguration = await response.json();
 
-  setWithExpiry(
-    STORAGE_KEYS.PUBLIC_CONFIG,
-    publicConfiguration,
-    STORAGE_TTL.PUBLIC_CONFIG,
-  );
+  if (response.ok && publicConfiguration?.clientKey) {
+    setWithExpiry(
+      STORAGE_KEYS.PUBLIC_CONFIG,
+      publicConfiguration,
+      STORAGE_TTL.PUBLIC_CONFIG,
+    );
+  }
 
   return publicConfiguration;
 }

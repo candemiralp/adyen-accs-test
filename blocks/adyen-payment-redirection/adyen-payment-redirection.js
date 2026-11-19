@@ -1,7 +1,49 @@
 import { readBlockConfig } from '../../scripts/aem.js';
 import { handleAdyenRedirect, buildOrderDetailsUrl } from './redirect.js';
 import { preloadCheckoutSuccess, renderCheckoutSuccess } from '../commerce-checkout-success/commerce-checkout-success.js';
-import { restoreFromSnapshot } from '../adyen-payment/index.js';
+import { restoreFromSnapshot, recoverCart, setPaymentResult } from '../adyen-payment/index.js';
+import { STORAGE_KEYS } from '../adyen-payment/storage.js';
+
+const DECLINE_MESSAGE = "We're sorry, your payment was declined. Please try again or use a different payment method.";
+
+/**
+ * The redirect payment was not completed and the backend cancelled the order.
+ * Rebuild the cart and send the shopper back to checkout with the decline
+ * message, the same way the checkout block handles a declined order.
+ * @param {Object} result - handleAdyenRedirect result with paymentDeclined set
+ */
+async function returnToCheckoutAfterDecline(result) {
+  const {
+    orderData, cartId, resultCode, newCartId,
+  } = result;
+
+  if (!newCartId) {
+    // recoverCart sends the cartId from the stored payment result: the cart that placed the order.
+    setPaymentResult({ resultCode, cartId });
+    await recoverCart(orderData.number, orderData.email, resultCode, {
+      orderToken: orderData.token,
+      orderId: orderData.id,
+      comment: `Payment declined by Adyen: ${resultCode}`,
+    });
+  }
+
+  try {
+    sessionStorage.setItem(STORAGE_KEYS.PAYMENT_ERROR, DECLINE_MESSAGE);
+    if (orderData.email) {
+      sessionStorage.setItem(STORAGE_KEYS.GUEST_EMAIL, orderData.email);
+    }
+    if (orderData.billingAddress?.firstName) {
+      sessionStorage.setItem(STORAGE_KEYS.GUEST_FIRSTNAME, orderData.billingAddress.firstName);
+    }
+    if (orderData.billingAddress?.lastName) {
+      sessionStorage.setItem(STORAGE_KEYS.GUEST_LASTNAME, orderData.billingAddress.lastName);
+    }
+  } catch {
+    // Ignore sessionStorage errors
+  }
+
+  window.location.href = '/checkout';
+}
 
 /**
  * Default configuration values
@@ -86,6 +128,8 @@ export default async function decorate(block) {
   if (result.success) {
     restoreFromSnapshot();
     await renderCheckoutSuccess(block, { orderData: result.orderData });
+  } else if (result.paymentDeclined) {
+    await returnToCheckoutAfterDecline(result);
   } else if (!result.success && result.redirect) {
     window.location.href = result.redirect;
   } else if (result.paymentFailed && result.orderData) {

@@ -1,10 +1,10 @@
-const A = `fragment REQUEST_RETURN_ORDER_FRAGMENT on Return {
+const d = `fragment REQUEST_RETURN_ORDER_FRAGMENT on Return {
   __typename
   uid
   status
   number
   created_at
-}`, e = `fragment ADDRESS_FRAGMENT on OrderAddress {
+}`, _ = `fragment ADDRESS_FRAGMENT on OrderAddress {
   city
   company
   country_code
@@ -20,7 +20,7 @@ const A = `fragment REQUEST_RETURN_ORDER_FRAGMENT on Return {
   suffix
   telephone
   vat_id
-}`, _ = `fragment PRODUCT_DETAILS_FRAGMENT on ProductInterface {
+}`, r = `fragment PRODUCT_DETAILS_FRAGMENT on ProductInterface {
   __typename
   canonical_url
   url_key
@@ -65,7 +65,7 @@ const A = `fragment REQUEST_RETURN_ORDER_FRAGMENT on Return {
       currency
     }
   }
-}`, r = `fragment GIFT_CARD_DETAILS_FRAGMENT on GiftCardOrderItem {
+}`, n = `fragment GIFT_CARD_DETAILS_FRAGMENT on GiftCardOrderItem {
   ...PRICE_DETAILS_FRAGMENT
   gift_message {
     ...GIFT_MESSAGE_FRAGMENT
@@ -109,7 +109,7 @@ const A = `fragment REQUEST_RETURN_ORDER_FRAGMENT on Return {
     ...PRODUCT_DETAILS_FRAGMENT
   }
   ...PRICE_DETAILS_FRAGMENT
-}`, n = `fragment BUNDLE_ORDER_ITEM_DETAILS_FRAGMENT on BundleOrderItem {
+}`, E = `fragment BUNDLE_ORDER_ITEM_DETAILS_FRAGMENT on BundleOrderItem {
   ...PRICE_DETAILS_FRAGMENT
   bundle_options {
     uid
@@ -119,7 +119,7 @@ const A = `fragment REQUEST_RETURN_ORDER_FRAGMENT on Return {
       product_name
     }
   }
-}`, d = ``, E = `fragment ORDER_ITEM_FRAGMENT on OrderItemInterface {
+}`, R = ``, i = `fragment ORDER_ITEM_FRAGMENT on OrderItemInterface {
   ...ORDER_ITEM_DETAILS_FRAGMENT
   ... on BundleOrderItem {
     ...BUNDLE_ORDER_ITEM_DETAILS_FRAGMENT
@@ -131,7 +131,7 @@ const A = `fragment REQUEST_RETURN_ORDER_FRAGMENT on Return {
     }
   }
 }
-${d}`, i = `fragment ORDER_SUMMARY_FRAGMENT on OrderTotal {
+${R}`, c = `fragment ORDER_SUMMARY_FRAGMENT on OrderTotal {
   gift_options {
     gift_wrapping_for_items {
       currency
@@ -201,7 +201,7 @@ ${d}`, i = `fragment ORDER_SUMMARY_FRAGMENT on OrderTotal {
     }
     label
   }
-}`, o = `fragment RETURNS_FRAGMENT on Returns {
+}`, T = `fragment RETURNS_FRAGMENT on Returns {
   __typename
   items {
     number
@@ -240,19 +240,19 @@ ${d}`, i = `fragment ORDER_SUMMARY_FRAGMENT on OrderTotal {
       }
     }
   }
-}`, R = `fragment APPLIED_GIFT_CARDS_FRAGMENT on ApplyGiftCardToOrder {
+}`, u = `fragment APPLIED_GIFT_CARDS_FRAGMENT on ApplyGiftCardToOrder {
   __typename
   code
   applied_balance {
     value
     currency
   }
-}`, T = `fragment GIFT_MESSAGE_FRAGMENT on GiftMessage {
+}`, A = `fragment GIFT_MESSAGE_FRAGMENT on GiftMessage {
   __typename
   from
   to
   message
-}`, c = `fragment GIFT_WRAPPING_FRAGMENT on GiftWrapping {
+}`, o = `fragment GIFT_WRAPPING_FRAGMENT on GiftWrapping {
   __typename
   uid
   design
@@ -263,7 +263,7 @@ ${d}`, i = `fragment ORDER_SUMMARY_FRAGMENT on OrderTotal {
     value
     currency
   }
-}`, s = (`fragment GUEST_ORDER_FRAGMENT on CustomerOrder {
+}`, e = (`fragment GUEST_ORDER_FRAGMENT on CustomerOrder {
   printed_card_included
   gift_receipt_included
   gift_wrapping {
@@ -289,10 +289,8 @@ ${d}`, i = `fragment ORDER_SUMMARY_FRAGMENT on OrderTotal {
   shipping_method
   available_actions
   is_virtual
-  admin_assisted_order
-  comments {
-    message
-    timestamp
+  returns {
+    ...RETURNS_FRAGMENT
   }
   payment_methods {
     name
@@ -322,7 +320,6 @@ ${d}`, i = `fragment ORDER_SUMMARY_FRAGMENT on OrderTotal {
       id
       product_sku
       product_name
-      quantity_shipped
       order_item {
         ...ORDER_ITEM_DETAILS_FRAGMENT
         ... on GiftCardOrderItem {
@@ -351,110 +348,18 @@ ${d}`, i = `fragment ORDER_SUMMARY_FRAGMENT on OrderTotal {
     ...ORDER_SUMMARY_FRAGMENT
   }
 }
-${e}
-${R}
-${n}
-${r}
-${T}
-${c}
-${a}
+${_}
+${u}
 ${E}
-${i}
-${t}
-${_}`), u = `fragment CUSTOMER_ORDER_FRAGMENT on CustomerOrder {
-  printed_card_included
-  gift_receipt_included
-  gift_wrapping {
-    ...GIFT_WRAPPING_FRAGMENT
-  }
-  gift_message {
-    ...GIFT_MESSAGE_FRAGMENT
-  }
-  applied_gift_cards {
-    ...APPLIED_GIFT_CARDS_FRAGMENT
-  }
-  items_eligible_for_return {
-    ...ORDER_ITEM_DETAILS_FRAGMENT
-  }
-  email
-  id
-  number
-  order_date
-  order_status_change_date
-  status
-  carrier
-  shipping_method
-  available_actions
-  is_virtual
-  admin_assisted_order
-  comments {
-    message
-    timestamp
-  }
-  payment_methods {
-    name
-    type
-  }
-  applied_coupons {
-    code
-  }
-  shipments {
-    id
-    number
-    tracking {
-      title
-      number
-      carrier
-    }
-    comments {
-      message
-      timestamp
-    }
-    items {
-      __typename
-      id
-      product_sku
-      product_name
-      quantity_shipped
-      order_item {
-        ...ORDER_ITEM_DETAILS_FRAGMENT
-        ... on GiftCardOrderItem {
-          ...GIFT_CARD_DETAILS_FRAGMENT
-          product {
-            ...PRODUCT_DETAILS_FRAGMENT
-          }
-        }
-      }
-    }
-  }
-  payment_methods {
-    name
-    type
-  }
-  shipping_address {
-    ...ADDRESS_FRAGMENT
-  }
-  billing_address {
-    ...ADDRESS_FRAGMENT
-  }
-  items {
-    ...ORDER_ITEM_FRAGMENT
-  }
-  total {
-    ...ORDER_SUMMARY_FRAGMENT
-  }
-}
-${e}
-${R}
 ${n}
-${r}
-${T}
-${c}
+${A}
+${o}
 ${a}
-${E}
 ${i}
+${c}
 ${t}
-${_}`, m = `fragment PLACE_ORDER_FRAGMENT on PlaceOrderOutput {
+${r}
+${T}`), s = `fragment PLACE_ORDER_FRAGMENT on PlaceOrderOutput {
   errors {
     code
     message
@@ -463,7 +368,7 @@ ${_}`, m = `fragment PLACE_ORDER_FRAGMENT on PlaceOrderOutput {
     ...GUEST_ORDER_FRAGMENT
   }
 }
-${s}`, G = `fragment PLACE_NEGOTIABLE_QUOTE_ORDER_FRAGMENT on PlaceNegotiableQuoteOrderOutputV2 {
+${e}`, l = `fragment PLACE_NEGOTIABLE_QUOTE_ORDER_FRAGMENT on PlaceNegotiableQuoteOrderOutputV2 {
   errors {
     code
     message
@@ -472,24 +377,23 @@ ${s}`, G = `fragment PLACE_NEGOTIABLE_QUOTE_ORDER_FRAGMENT on PlaceNegotiableQuo
     ...GUEST_ORDER_FRAGMENT
   }
 }
-${s}`;
+${e}`;
 export {
-e as ADDRESS_FRAGMENT,
-R as APPLIED_GIFT_CARDS_FRAGMENT,
-n as BUNDLE_ORDER_ITEM_DETAILS_FRAGMENT,
-u as CUSTOMER_ORDER_FRAGMENT,
-d as DOWNLOADABLE_ORDER_ITEMS_FRAGMENT,
-r as GIFT_CARD_DETAILS_FRAGMENT,
-T as GIFT_MESSAGE_FRAGMENT,
-c as GIFT_WRAPPING_FRAGMENT,
-s as GUEST_ORDER_FRAGMENT,
+_ as ADDRESS_FRAGMENT,
+u as APPLIED_GIFT_CARDS_FRAGMENT,
+E as BUNDLE_ORDER_ITEM_DETAILS_FRAGMENT,
+R as DOWNLOADABLE_ORDER_ITEMS_FRAGMENT,
+n as GIFT_CARD_DETAILS_FRAGMENT,
+A as GIFT_MESSAGE_FRAGMENT,
+o as GIFT_WRAPPING_FRAGMENT,
+e as GUEST_ORDER_FRAGMENT,
 a as ORDER_ITEM_DETAILS_FRAGMENT,
-E as ORDER_ITEM_FRAGMENT,
-i as ORDER_SUMMARY_FRAGMENT,
-G as PLACE_NEGOTIABLE_QUOTE_ORDER_FRAGMENT,
-m as PLACE_ORDER_FRAGMENT,
+i as ORDER_ITEM_FRAGMENT,
+c as ORDER_SUMMARY_FRAGMENT,
+l as PLACE_NEGOTIABLE_QUOTE_ORDER_FRAGMENT,
+s as PLACE_ORDER_FRAGMENT,
 t as PRICE_DETAILS_FRAGMENT,
-_ as PRODUCT_DETAILS_FRAGMENT,
-A as REQUEST_RETURN_ORDER_FRAGMENT,
-o as RETURNS_FRAGMENT
+r as PRODUCT_DETAILS_FRAGMENT,
+d as REQUEST_RETURN_ORDER_FRAGMENT,
+T as RETURNS_FRAGMENT
 };

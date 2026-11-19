@@ -19,6 +19,8 @@
  * 13. setRedirectPaymentCode / getRedirectPaymentCode / clearRedirectPaymentCode – localStorage round-trip
  * 14. setActiveComponent / getActiveComponent – in-memory reference round-trip
  * 15. setPaymentResultFetchPromise / getPaymentResultFetchPromise – in-memory promise round-trip
+ * 16. getPaymentResult (async) – waits for paymentResultFetchPromise then reads cache/localStorage
+ * 17. getPendingOrderData / clearPendingOrderData – in-memory + localStorage round-trip
  */
 
 // ---------------------------------------------------------------------------
@@ -511,6 +513,222 @@ describe('setPaymentResultFetchPromise / getPaymentResultFetchPromise – in-mem
       win.__setPaymentResultFetchPromise(Promise.resolve());
       win.__setPaymentResultFetchPromise(null);
       expect(win.__getPaymentResultFetchPromise()).to.be.null;
+    });
+  });
+});
+
+// ===========================================================================
+// Helper: expose async getPaymentResult logic on window
+// ===========================================================================
+function visitAndExposeGetPaymentResult() {
+  cy.visit('/', { failOnStatusCode: false });
+
+  cy.window().then((win) => {
+    const ls = win.localStorage;
+    const PAYMENT_RESULT_KEY = 'adyen_payment_result';
+
+    let paymentResultCache = null;
+    let paymentResultFetchPromise = null;
+
+    win.__setPaymentResultCache = (val) => { paymentResultCache = val; };
+    win.__setFetchPromise = (p) => { paymentResultFetchPromise = p; };
+
+    win.__getPaymentResult = async () => {
+      if (paymentResultFetchPromise) {
+        try {
+          await paymentResultFetchPromise;
+        } catch {
+          // continue
+        }
+      }
+
+      if (paymentResultCache) {
+        return paymentResultCache;
+      }
+
+      const raw = ls.getItem(PAYMENT_RESULT_KEY);
+      if (raw) {
+        try {
+          paymentResultCache = JSON.parse(raw);
+          return paymentResultCache;
+        } catch {
+          return null;
+        }
+      }
+
+      return null;
+    };
+  });
+}
+
+// ===========================================================================
+// Suite 16 – getPaymentResult (async): waits for fetch promise, reads cache/localStorage
+// ===========================================================================
+describe('getPaymentResult – async version waits for fetch promise then returns result', () => {
+  beforeEach(() => {
+    visitAndExposeGetPaymentResult();
+    cy.window().then((win) => {
+      win.localStorage.removeItem('adyen_payment_result');
+    });
+  });
+
+  it('returns null when no cache and nothing in localStorage', () => {
+    cy.window().then(async (win) => {
+      const result = await win.__getPaymentResult();
+      expect(result).to.be.null;
+    });
+  });
+
+  it('returns the in-memory cached result directly without reading localStorage', () => {
+    cy.window().then(async (win) => {
+      const cached = { resultCode: 'Authorised', pspReference: 'CACHE_PSP' };
+      win.__setPaymentResultCache(cached);
+      const result = await win.__getPaymentResult();
+      expect(result).to.deep.equal(cached);
+    });
+  });
+
+  it('reads result from localStorage when cache is empty', () => {
+    cy.window().then(async (win) => {
+      const stored = { resultCode: 'Pending', pspReference: 'LS_PSP_001' };
+      win.localStorage.setItem('adyen_payment_result', JSON.stringify(stored));
+      const result = await win.__getPaymentResult();
+      expect(result.resultCode).to.equal('Pending');
+      expect(result.pspReference).to.equal('LS_PSP_001');
+    });
+  });
+
+  it('waits for a resolved fetch promise before returning the result', () => {
+    cy.window().then(async (win) => {
+      const stored = { resultCode: 'Authorised', pspReference: 'PROMISE_PSP' };
+
+      // Simulate a fetch promise that resolves and populates localStorage
+      const fetchPromise = new Promise((resolve) => {
+        setTimeout(() => {
+          win.localStorage.setItem('adyen_payment_result', JSON.stringify(stored));
+          resolve();
+        }, 50);
+      });
+
+      win.__setFetchPromise(fetchPromise);
+      const result = await win.__getPaymentResult();
+      // After waiting for the promise, localStorage is populated
+      expect(result.pspReference).to.equal('PROMISE_PSP');
+    });
+  });
+
+  it('continues and returns null when the fetch promise rejects', () => {
+    cy.window().then(async (win) => {
+      // Promise that rejects — getPaymentResult should swallow the error and return null
+      win.__setFetchPromise(Promise.reject(new Error('fetch failed')));
+      const result = await win.__getPaymentResult();
+      expect(result).to.be.null;
+    });
+  });
+});
+
+// ===========================================================================
+// Helper: expose getPendingOrderData / clearPendingOrderData on window
+// ===========================================================================
+function visitAndExposePendingOrderFunctions() {
+  cy.visit('/', { failOnStatusCode: false });
+
+  cy.window().then((win) => {
+    const ls = win.localStorage;
+    const PENDING_ORDER_KEY = 'adyen_pending_order';
+
+    let pendingOrderCache = null;
+
+    win.__setPendingOrderDataFull = (orderData) => {
+      pendingOrderCache = orderData;
+      if (orderData) {
+        ls.setItem(PENDING_ORDER_KEY, JSON.stringify(orderData));
+      } else {
+        ls.removeItem(PENDING_ORDER_KEY);
+      }
+    };
+
+    win.__getPendingOrderData = () => {
+      if (pendingOrderCache) return pendingOrderCache;
+      const raw = ls.getItem(PENDING_ORDER_KEY);
+      if (raw) {
+        try {
+          pendingOrderCache = JSON.parse(raw);
+          return pendingOrderCache;
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    };
+
+    win.__clearPendingOrderData = () => {
+      pendingOrderCache = null;
+      ls.removeItem(PENDING_ORDER_KEY);
+    };
+  });
+}
+
+// ===========================================================================
+// Suite 17 – getPendingOrderData / clearPendingOrderData round-trip
+// ===========================================================================
+describe('getPendingOrderData / clearPendingOrderData – in-memory + localStorage round-trip', () => {
+  beforeEach(() => {
+    visitAndExposePendingOrderFunctions();
+    cy.window().then((win) => {
+      win.localStorage.removeItem('adyen_pending_order');
+    });
+  });
+
+  it('returns null when no order data is stored', () => {
+    cy.window().then((win) => {
+      expect(win.__getPendingOrderData()).to.be.null;
+    });
+  });
+
+  it('returns the order data written by setPendingOrderData', () => {
+    cy.window().then((win) => {
+      const order = { number: '000000400', token: 'tok-pending', email: 'p@example.com' };
+      win.__setPendingOrderDataFull(order);
+      const result = win.__getPendingOrderData();
+      expect(result.number).to.equal('000000400');
+      expect(result.token).to.equal('tok-pending');
+    });
+  });
+
+  it('reads order data from localStorage when in-memory cache is cold (page reload simulation)', () => {
+    cy.window().then((win) => {
+      // Directly write to localStorage (simulating a reload where in-memory cache is gone)
+      const order = { number: '000000401', token: 'tok-reload', email: 'r@example.com' };
+      win.localStorage.setItem('adyen_pending_order', JSON.stringify(order));
+      const result = win.__getPendingOrderData();
+      expect(result.number).to.equal('000000401');
+    });
+  });
+
+  it('clearPendingOrderData removes data from both memory and localStorage', () => {
+    cy.window().then((win) => {
+      const order = { number: '000000402', token: 'tok-clear', email: 'c@example.com' };
+      win.__setPendingOrderDataFull(order);
+
+      // Verify it's stored
+      expect(win.__getPendingOrderData()).to.not.be.null;
+      expect(win.localStorage.getItem('adyen_pending_order')).to.not.be.null;
+
+      // Clear it
+      win.__clearPendingOrderData();
+
+      // Both in-memory and localStorage should be gone
+      expect(win.localStorage.getItem('adyen_pending_order')).to.be.null;
+      // Calling getPendingOrderData again should return null (cache cleared)
+      expect(win.__getPendingOrderData()).to.be.null;
+    });
+  });
+
+  it('clearPendingOrderData is a no-op when nothing stored (does not throw)', () => {
+    cy.window().then((win) => {
+      expect(() => win.__clearPendingOrderData()).to.not.throw();
+      expect(win.__getPendingOrderData()).to.be.null;
     });
   });
 });

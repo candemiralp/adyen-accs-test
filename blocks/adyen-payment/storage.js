@@ -24,6 +24,9 @@ export const STORAGE_KEYS = {
   // instead of reconstructing it from Adyen's paymentMethod.type (which lacks regional
   // suffixes like _US and may not match Commerce's available_payment_methods).
   REDIRECT_PAYMENT_CODE: 'adyen_redirect_payment_code',
+  // A cart recovery the backend refused until the customer signs in (sessionStorage).
+  // Replayed with the customer token once they are back on checkout signed in.
+  PENDING_RECOVERY: 'adyen_pending_recovery',
 };
 
 // TTL constants (in seconds)

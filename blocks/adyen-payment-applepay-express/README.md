@@ -4,14 +4,13 @@ Renders an Apple Pay button on Cart and PDP pages, enabling a full express check
 
 ## How it works
 
-1. **Browser compatibility check** — Calls `isApplePaySupportedBrowser()` to check if the browser is Safari only (verified via `/Safari/` user agent pattern while excluding Chromium-based browsers). If not Safari, hides the block silently and exits. This early check prevents the block from being visible on unsupported browsers (Chrome, Firefox, Edge, Opera, etc.).
-2. Resolves the active cart (`resolveCart()`). On PDP, first calls `addToCart(sku, qty)` using `data-sku` from the block element and the quantity selector value (defaults to 1).
-3. Reads the backend URL from `getBackendIntegrationUrl(null)` (localStorage cache). Throws if unavailable.
-4. Fetches Adyen public configuration and loads the Adyen Web SDK.
-5. Fetches `paymentMethodsResponse` and creates its own `AdyenCheckout` instance (independent of the standard checkout dropin).
-6. Locates the `applepay` entry in `paymentMethods`. Throws if not present.
-7. Creates `window.AdyenWeb.ApplePay` with shipping and authorization callbacks (see flow below).
-8. Calls `isAvailable()` — mounts if the promise resolves (HTTPS + Safari/WebKit required). Hides the block silently if rejected.
+1. Resolves the active cart (`resolveCart()`). On PDP, first calls `addToCart(sku, qty)` using `data-sku` from the block element and the quantity selector value (defaults to 1).
+2. Reads the backend URL from `getBackendIntegrationUrl(null)` (localStorage cache). Throws if unavailable.
+3. Fetches Adyen public configuration and loads the Adyen Web SDK.
+4. Fetches `paymentMethodsResponse` and creates its own `AdyenCheckout` instance (independent of the standard checkout dropin).
+5. Locates the `applepay` entry in `paymentMethods`. Throws if not present.
+6. Creates `window.AdyenWeb.ApplePay` with shipping and authorization callbacks (see flow below).
+7. Calls `isAvailable()` — mounts if the promise resolves (HTTPS required). Hides the block silently if rejected. The block is not hidden by browser: Adyen Web loads Apple's SDK, which also runs outside Safari (the shopper scans a code with their iPhone).
 
 ## Block structure
 
@@ -94,7 +93,7 @@ All Adyen configuration (client key, environment, country, Apple Pay merchant co
 ## Requirements
 
 - **HTTPS only** — Apple Pay is unavailable on plain HTTP origins.
-- **Safari / WebKit** — Apple Pay is only available in Safari on macOS/iOS and in WebKit-based browsers on iOS. The block performs early browser detection (`isApplePaySupported()`) and hides silently on Chrome, Firefox, Edge, and other non-Safari browsers.
+- **Any browser** — Apple Pay runs natively in Safari; in Chrome, Firefox and Edge Apple's SDK shows a code the shopper scans with their iPhone. `isAvailable()` decides; there is no user-agent check.
 - **Domain registration** — The storefront domain must be registered in Adyen Customer Area under Apple Pay domain registration.
 - **Backend URL cache warm** — `getBackendIntegrationUrl(null)` must return a URL (cache is populated when a user visits the standard checkout page).
 

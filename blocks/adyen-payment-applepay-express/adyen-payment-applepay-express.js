@@ -59,25 +59,6 @@ import {
 } from '../adyen-payment-express/index.js';
 
 /**
- * Browser compatibility check for Apple Pay.
- * Apple Pay is only supported on Safari and WebKit-based browsers (iOS Safari, iPadOS Safari).
- * Returns false for Chrome, Firefox, Edge, and other non-Safari browsers.
- *
- * @returns {boolean} true if browser supports Apple Pay, false otherwise
- */
-function isApplePaySupported() {
-  const ua = window.navigator.userAgent;
-  console.debug('[applepay-express] Browser UA:', ua);
-
-  // Safari: contains "Safari" but not "Chrome", "Firefox", "Edge", "OPR" (Opera)
-  // Note: iOS Safari and iPadOS Safari both contain "Safari" in their UA string
-  const isSafari = /Safari/.test(ua) && !/Chrome|Firefox|Edge|OPR/.test(ua);
-
-  console.debug('[applepay-express] isApplePaySupported():', isSafari);
-  return isSafari;
-}
-
-/**
  * Lazy-load helper — defer cart resolution until authenticated event has fired.
 /**
  * Async initializer — all heavy work (network calls, SDK load) runs here.
@@ -307,8 +288,8 @@ async function initExpressCheckout(block, container) {
     });
 
     // ── 6. Create Apple Pay component ──
-    // Note: applePayConfig may be absent when the request comes from a non-Safari
-    // browser or a device without Apple Pay. isAvailable() will handle this
+    // Note: applePayConfig may be absent when the request comes from a device
+    // without Apple Pay. isAvailable() will handle this
     // gracefully by rejecting, which hides the block. Pass an empty configuration
     // if the backend didn't return one so the component can still run its check.
     const applePayConfig = paymentMethods.paymentMethods?.find(
@@ -577,15 +558,8 @@ async function initExpressCheckout(block, container) {
 export default function decorate(block) {
   console.debug('[applepay-express] Block decorator starting...');
 
-  // Hide on unsupported browsers (Chrome, Firefox, Edge, etc.)
-  if (!isApplePaySupported()) {
-    console.debug('[applepay-express] Not supported on this browser, hiding block');
-    block.style.display = 'none';
-    return Promise.resolve();
-  }
-
-  console.debug('[applepay-express] Browser supported, proceeding with initialization');
-
+  // No browser check: Adyen Web loads Apple's SDK, which also runs outside Safari.
+  // initExpressCheckout hides the block when isAvailable() rejects.
   const container = document.createElement('div');
   container.className = 'applepay-express-container';
   block.appendChild(container);

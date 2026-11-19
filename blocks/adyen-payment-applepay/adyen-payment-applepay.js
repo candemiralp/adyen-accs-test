@@ -4,8 +4,9 @@
  * Apple Pay requires domainNames to be registered on the Adyen merchant account.
  * The domain is extracted from the current page origin and passed to the payment method.
  *
- * Apple Pay is only available on Safari. On other browsers (Chrome, Firefox, Edge),
- * the block is hidden to avoid confusion.
+ * Apple Pay is offered in every browser. Adyen Web loads Apple's SDK, which outside Safari
+ * shows a code the shopper scans with their iPhone. isAvailable() decides whether Apple Pay
+ * can be used here; when it cannot, the shopper is told to choose another method.
  */
 
 import {
@@ -18,37 +19,12 @@ import {
   getAdyenCheckout,
   getAdyenConfiguration,
   setActiveComponent,
+  validateCheckoutForms,
 } from '../adyen-payment/index.js';
-
-/**
- * Detects if the current browser is Safari
- * @returns {boolean} true if running on Safari
- */
-function isSafari() {
-  const ua = window.navigator.userAgent;
-  // eslint-disable-next-line no-console
-  console.log('[Apple Pay] Browser UA:', ua);
-  // Safari user agent contains "Safari" but not "Chrome", "Firefox", "Edge"
-  const result = /Safari/.test(ua) && !/Chrome|Firefox|Edge|OPR/.test(ua);
-  // eslint-disable-next-line no-console
-  console.log('[Apple Pay] isSafari() result:', result);
-  return result;
-}
 
 export default async function decorate(block) {
   // eslint-disable-next-line no-console
   console.log('[Apple Pay] Block decorator starting...');
-
-  // Hide on non-Safari browsers (Chrome, Firefox, Edge, etc.)
-  if (!isSafari()) {
-    // eslint-disable-next-line no-console
-    console.log('[Apple Pay] Not running on Safari, hiding block');
-    block.style.display = 'none';
-    return;
-  }
-
-  // eslint-disable-next-line no-console
-  console.log('[Apple Pay] Safari detected, proceeding with Apple Pay initialization');
 
   const container = document.createElement('div');
   container.id = 'applepay-container';
@@ -91,6 +67,8 @@ export default async function decorate(block) {
     const paymentMethod = new window.AdyenWeb.ApplePay(checkout, {
       configuration: paymentMethodDefinition.configuration,
       domainNames: [domain],
+      // Validate the checkout forms before the Apple Pay sheet opens.
+      onClick: (resolve, reject) => (validateCheckoutForms() ? resolve() : reject()),
       onPaymentFailed: () => {
         // eslint-disable-next-line no-console
         console.log('[Apple Pay] Payment failed callback triggered');
@@ -122,7 +100,7 @@ export default async function decorate(block) {
       // Apple Pay is not available
       // eslint-disable-next-line no-console
       console.log('[Apple Pay] isAvailable() rejected - Apple Pay not available:', error);
-      showError(container, 'Failed to load payment form. Please refresh the page.');
+      showError(container, 'Apple Pay is not available on this device or browser. Please choose another payment method.');
     });
 
     // eslint-disable-next-line no-console

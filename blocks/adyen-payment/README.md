@@ -57,7 +57,7 @@ The `adyen-payment/` directory is the singleton shared by every Adyen payment bl
 | Function | Description |
 |---|---|
 | `getBackendIntegrationUrl(checkoutData)` | Extracts the OOPE backend URL from `availablePaymentMethods[].oope_payment_method_config.backend_integration_url` and caches it in localStorage for 24 h. |
-| `fetchPublicConfiguration(backendUrl, scope)` | POSTs to `{backendUrl}public-configuration`. Result is cached in localStorage for 24 h. |
+| `fetchPublicConfiguration(backendUrl, scope)` | POSTs to `{backendUrl}public-configuration`. A successful response carrying a `clientKey` is cached in localStorage for 24 h; an error response is never cached. |
 | `fetchPaymentMethods(backendUrl, body)` | POSTs to `{backendUrl}payments-methods`. Not cached. |
 | `buildStaticConfig()` | Builds the client-side Adyen checkout config object (locale, analytics, risk, session callbacks). |
 | `buildBaseConfiguration(...)` | Merges `buildStaticConfig()` output with handler callbacks into the full config passed to `new AdyenCheckout()`. |

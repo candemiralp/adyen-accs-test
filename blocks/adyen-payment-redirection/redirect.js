@@ -127,6 +127,67 @@ function getBackendIntegrationUrl() {
 }
 
 // ============================================================================
+// PAYMENT RESULT HELPERS
+// ============================================================================
+
+const SUCCESS_RESULT_CODES = ['Authorised', 'Pending', 'Received'];
+const FAILURE_RESULT_CODES = ['Refused', 'Error', 'Cancelled'];
+
+/**
+ * Reduce the component state stored before the redirect to what the redirect
+ * return needs. Card state never rides this path: a scheme or stored-card state
+ * is dropped, and card-number, security-code and stored-method fields are removed
+ * from anything else.
+ * @param {Object} stateData
+ * @returns {Object|undefined}
+ */
+export function sanitizeRedirectState(stateData) {
+  const paymentMethod = stateData?.paymentMethod;
+  if (!paymentMethod?.type || paymentMethod.type === 'scheme' || paymentMethod.storedPaymentMethodId) {
+    return undefined;
+  }
+  const cleanPaymentMethod = Object.fromEntries(
+    Object.entries(paymentMethod).filter(([key]) => !key.startsWith('encrypted')
+      && key !== 'storedPaymentMethodId'
+      && key !== 'recurringDetailReference'),
+  );
+  return { ...stateData, paymentMethod: cleanPaymentMethod };
+}
+
+/**
+ * Read the backend's recorded payment result for an order just placed.
+ * @param {Object} orderData - placeOrder result (number, email, token)
+ * @param {string} cartId - The cart the order was placed from
+ * @returns {Promise<Object|null>} The order result, or null when it cannot be read
+ */
+async function readOrderResult(orderData, cartId) {
+  try {
+    const backendUrl = getBackendIntegrationUrl();
+    if (!backendUrl || !orderData?.number) return null;
+
+    const response = await adyenFetch(`${backendUrl.replace(/\/$/, '')}/order-result`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        incrementId: orderData.number,
+        customerEmail: orderData.email,
+        cartId,
+        ...(orderData.token && { orderToken: orderData.token }),
+      }),
+    }, { backendUrl, cartId, isGuest: !getUserTokenCookie() });
+
+    if (!response.ok) {
+      console.warn(`order-result returned ${response.status} after redirect placeOrder`);
+      return null;
+    }
+    return await response.json();
+  } catch (error) {
+    console.warn('order-result could not be read after redirect placeOrder:', error);
+    return null;
+  }
+}
+
+// ============================================================================
 // URL HELPERS
 // ============================================================================
 
@@ -279,15 +340,23 @@ export async function handleAdyenRedirect({
     const { action: _action, ...paymentResultDataWithoutAction } = paymentResultData ?? {};
     setPaymentResult(paymentResultDataWithoutAction);
 
-    const cartId = urlParams.get('cartId') || paymentResultData?.cartId;
-    if (!cartId) {
-      throw new Error('Cart ID not found for client-side payment flow');
+    // Only place an order for the cart this browser actually started the redirect payment on.
+    // Without a stored payment result there is nothing tying the redirectResult to a cart,
+    // and a cartId in the URL that disagrees with the stored one is not ours to act on.
+    const storedCartId = paymentResultData?.cartId;
+    const urlCartId = urlParams.get('cartId');
+    if (!storedCartId) {
+      throw new Error('No stored payment result for this redirect return');
     }
+    if (urlCartId && urlCartId !== storedCartId) {
+      throw new Error('Redirect return cartId does not match the cart the payment started on');
+    }
+    const cartId = storedCartId;
 
     // Build additional_data: always include details (redirectResult).
     // Include paymentData if available — the Commerce Adyen module and backend
     // webhook both use paymentData to verify the redirect result with Adyen.
-    // Include state if stored — the backend's details flow takes priority over
+    // Include a sanitised state if stored — the backend's details flow takes priority over
     // the state flow, so passing both ensures the redirect result is used while
     // satisfying any Commerce-side availability checks.
     const additionalData = [
@@ -296,7 +365,7 @@ export async function handleAdyenRedirect({
     if (paymentData) {
       additionalData.push({ key: 'paymentData', value: paymentData });
     }
-    const stateData = paymentResultData?.stateData;
+    const stateData = sanitizeRedirectState(paymentResultData?.stateData);
     if (stateData) {
       additionalData.push({ key: 'state', value: JSON.stringify(stateData) });
     }
@@ -307,6 +376,28 @@ export async function handleAdyenRedirect({
     });
 
     const orderData = await placeOrder(cartId);
+
+    // placeOrder succeeding does not mean the payment did: when Adyen rejects the
+    // redirectResult, the backend cancels the order but still lets placeOrder complete.
+    // The backend's recorded result is the authority on whether this order was paid.
+    const orderResult = await readOrderResult(orderData, cartId);
+    if (orderResult && FAILURE_RESULT_CODES.includes(orderResult.resultCode)) {
+      console.warn('Adyen redirect payment was not completed for order:', orderResult.resultCode);
+      return {
+        success: false,
+        paymentDeclined: true,
+        orderData,
+        cartId,
+        resultCode: orderResult.resultCode,
+        newCartId: orderResult.newCartId,
+      };
+    }
+    if (!orderResult || !SUCCESS_RESULT_CODES.includes(orderResult.resultCode)) {
+      // Could not confirm either way (order-result unreachable or an unexpected code).
+      // The backend has already cancelled a failed order, so fall through to the
+      // confirmation page rather than telling a shopper who paid that they did not.
+      console.warn('Could not confirm the payment result for order:', orderData?.number);
+    }
 
     try {
       sessionStorage.setItem('recent_order_data', JSON.stringify(orderData));

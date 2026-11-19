@@ -97,27 +97,6 @@ import {
 } from '../adyen-payment-express/index.js';
 
 /**
- * Detects if the current browser supports Google Pay
- * Google Pay is available on Chrome, Edge, and Android browsers,
- * but NOT on Safari or Firefox
- * @returns {boolean} true if running on a browser that supports Google Pay
- */
-function isGooglePaySupported() {
-  const ua = window.navigator.userAgent;
-  // eslint-disable-next-line no-console
-  console.log('[Google Pay] Browser UA:', ua);
-  // Safari: contains "Safari" but not "Chrome", "Firefox", "Edge"
-  const isSafari = /Safari/.test(ua) && !/Chrome|Firefox|Edge|OPR/.test(ua);
-  // Firefox
-  const isFirefox = /Firefox/.test(ua);
-
-  const result = !isSafari && !isFirefox;
-  // eslint-disable-next-line no-console
-  console.log('[Google Pay] isGooglePaySupported() - isSafari:', isSafari, 'isFirefox:', isFirefox, 'result:', result);
-  return result;
-}
-
-/**
  * Lazy-load helper — defer cart resolution until authenticated event has fired.
  * Polls for window.__ADYEN_AUTH_STATE__ with extended timeout to ensure the
  * auth dropin has completed its initialization before resolveCart() is called.
@@ -1117,17 +1096,6 @@ async function initExpressCheckout(block, container) {
 export default function decorate(block) {
   // eslint-disable-next-line no-console
   console.log('[Google Pay] Block decorator starting...');
-
-  // Hide on unsupported browsers (Safari, Firefox)
-  if (!isGooglePaySupported()) {
-    // eslint-disable-next-line no-console
-    console.log('[Google Pay] Not supported on this browser, hiding block');
-    block.style.display = 'none';
-    return Promise.resolve();
-  }
-
-  // eslint-disable-next-line no-console
-  console.log('[Google Pay] Browser supported, proceeding with initialization');
 
   const container = document.createElement('div');
   container.className = 'googlepay-express-container';

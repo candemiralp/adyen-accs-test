@@ -14,6 +14,8 @@
  *  7. recoverCart – cookie written with newCartId
  *  8. saveInstanceSnapshot / clearInstanceSnapshot – round-trip via localStorage
  *  9. restoreFromSnapshot – returns false when no snapshot present
+ * 10. registerBeforeCheckoutUpdate – sets callback; returned unregister fn clears it
+ * 11. setRecoveryStartCallback – sets callback; returned unregister fn clears it
  *
  * Implementation note:
  * ─────────────────────
@@ -747,6 +749,129 @@ describe('restoreFromSnapshot – returns false when no snapshot present', () =>
         }
       };
       expect(win.__restoreFromSnapshotCorrupt()).to.equal(false);
+    });
+  });
+});
+
+// ===========================================================================
+// Suite 10 – registerBeforeCheckoutUpdate: callback registration and unregister
+// ===========================================================================
+describe('registerBeforeCheckoutUpdate – callback registration and unregister function', () => {
+  beforeEach(() => {
+    cy.visit('/', { failOnStatusCode: false });
+    cy.window().then((win) => {
+      // Inline the registerBeforeCheckoutUpdate logic
+      let beforeCheckoutUpdateCallback = null;
+
+      win.__registerBeforeCheckoutUpdate = (callback) => {
+        beforeCheckoutUpdateCallback = callback;
+
+        return () => {
+          if (beforeCheckoutUpdateCallback === callback) {
+            beforeCheckoutUpdateCallback = null;
+          }
+        };
+      };
+
+      win.__getBeforeCheckoutUpdateCallback = () => beforeCheckoutUpdateCallback;
+    });
+  });
+
+  it('sets the callback so it can be retrieved', () => {
+    cy.window().then((win) => {
+      const cb = () => true;
+      win.__registerBeforeCheckoutUpdate(cb);
+      expect(win.__getBeforeCheckoutUpdateCallback()).to.equal(cb);
+    });
+  });
+
+  it('returns an unregister function that clears the callback', () => {
+    cy.window().then((win) => {
+      const cb = () => true;
+      const unregister = win.__registerBeforeCheckoutUpdate(cb);
+      unregister();
+      expect(win.__getBeforeCheckoutUpdateCallback()).to.be.null;
+    });
+  });
+
+  it('unregister is a no-op when a different callback has since been registered', () => {
+    cy.window().then((win) => {
+      const cb1 = () => true;
+      const cb2 = () => false;
+      const unregister1 = win.__registerBeforeCheckoutUpdate(cb1);
+      win.__registerBeforeCheckoutUpdate(cb2); // replaces cb1
+      unregister1(); // should NOT clear cb2
+      expect(win.__getBeforeCheckoutUpdateCallback()).to.equal(cb2);
+    });
+  });
+
+  it('registering null clears any existing callback', () => {
+    cy.window().then((win) => {
+      const cb = () => true;
+      win.__registerBeforeCheckoutUpdate(cb);
+      win.__registerBeforeCheckoutUpdate(null);
+      expect(win.__getBeforeCheckoutUpdateCallback()).to.be.null;
+    });
+  });
+});
+
+// ===========================================================================
+// Suite 11 – setRecoveryStartCallback: callback registration and unregister
+// ===========================================================================
+describe('setRecoveryStartCallback – callback registration and unregister function', () => {
+  beforeEach(() => {
+    cy.visit('/', { failOnStatusCode: false });
+    cy.window().then((win) => {
+      // Inline the setRecoveryStartCallback logic
+      let recoveryStartCallback = null;
+
+      win.__setRecoveryStartCallback = (callback) => {
+        recoveryStartCallback = callback;
+
+        return () => {
+          if (recoveryStartCallback === callback) {
+            recoveryStartCallback = null;
+          }
+        };
+      };
+
+      win.__getRecoveryStartCallback = () => recoveryStartCallback;
+    });
+  });
+
+  it('stores the provided callback so it can be retrieved', () => {
+    cy.window().then((win) => {
+      const cb = () => {};
+      win.__setRecoveryStartCallback(cb);
+      expect(win.__getRecoveryStartCallback()).to.equal(cb);
+    });
+  });
+
+  it('returns an unregister function that nulls out the callback', () => {
+    cy.window().then((win) => {
+      const cb = () => {};
+      const unregister = win.__setRecoveryStartCallback(cb);
+      unregister();
+      expect(win.__getRecoveryStartCallback()).to.be.null;
+    });
+  });
+
+  it('unregister is a no-op when a newer callback has been registered', () => {
+    cy.window().then((win) => {
+      const cb1 = () => {};
+      const cb2 = () => {};
+      const unregister1 = win.__setRecoveryStartCallback(cb1);
+      win.__setRecoveryStartCallback(cb2);
+      unregister1(); // should NOT clear cb2
+      expect(win.__getRecoveryStartCallback()).to.equal(cb2);
+    });
+  });
+
+  it('setting null clears any existing callback', () => {
+    cy.window().then((win) => {
+      win.__setRecoveryStartCallback(() => {});
+      win.__setRecoveryStartCallback(null);
+      expect(win.__getRecoveryStartCallback()).to.be.null;
     });
   });
 });

@@ -21,6 +21,7 @@ import {
   getPendingOrderData,
   clearPendingOrderData,
   getCheckoutAttemptId,
+  setPlacedOrderCartId,
 } from './state.js';
 
 import { STORAGE_KEYS } from './storage.js';
@@ -336,11 +337,16 @@ export function createDefaultOnSubmit(
             ),
             origin: window.location.origin,
             reference: cartData.id,
+            // Adyen line-item amounts are per unit (it multiplies them by quantity); the cart
+            // item total is the row total.
             lineItems: cartData.items.map((item) => ({
               id: item.uid,
               description: item.name,
               quantity: item.quantity,
-              amountIncludingTax: Math.round(item.total.value * 100),
+              amountIncludingTax: formatAmount(
+                item.total.value / (item.quantity || 1),
+                item.total.currency ?? cartData.total?.includingTax?.currency,
+              ).value,
             })),
           },
         }),
@@ -793,6 +799,7 @@ export function createDefaultOnAdditionalDetails(
         }
 
         try {
+          setPlacedOrderCartId(cartData.id);
           const orderData = await placeOrder(cartData.id);
           events.emit('order/placed', orderData);
           actions.resolve({ resultCode: result.resultCode });
@@ -1101,6 +1108,7 @@ export function createDefaultOnPaymentCompleted(baseUrl, getCartData, options = 
       });
 
       try {
+        setPlacedOrderCartId(cartId);
         const orderData = await placeOrder(cartId);
         events.emit('order/placed', orderData);
       } catch (error) {
