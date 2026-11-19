@@ -100,17 +100,15 @@ describe('Apple Pay Express Checkout - Authorization Header Integration', () => 
       });
 
       // Simulating the pattern used in the block
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       // Act
       const result = await callPaymentWithAuth(
@@ -162,17 +160,15 @@ describe('Apple Pay Express Checkout - Authorization Header Integration', () => 
       });
 
       // Act
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       await callPaymentWithAuth(
         mockAuthContext.backendUrl,
@@ -210,17 +206,15 @@ describe('Apple Pay Express Checkout - Authorization Header Integration', () => 
       });
 
       // Act
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       const applePayToken = { version: 'EC_v1', data: 'encrypted' };
       await callPaymentWithAuth(
@@ -262,6 +256,7 @@ describe('Apple Pay Express Checkout - Authorization Header Integration', () => 
       };
 
       // Act & Assert for each success code
+      /* eslint-disable no-restricted-syntax, no-await-in-loop */
       for (const code of successCodes) {
         adyenFetch.mockResolvedValue({
           json: async () => ({ resultCode: code }),
@@ -289,6 +284,7 @@ describe('Apple Pay Express Checkout - Authorization Header Integration', () => 
         expect(result.resultCode).toBe(code);
         expect(successCodes).toContain(result.resultCode);
       }
+      /* eslint-enable no-restricted-syntax, no-await-in-loop */
     });
 
     it('should handle payment rejection responses', async () => {
@@ -346,17 +342,15 @@ describe('Apple Pay Express Checkout - Authorization Header Integration', () => 
       });
 
       // Act
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       const walletEmail = 'guest-wallet@apple.com';
       await callPaymentWithAuth(
@@ -394,17 +388,15 @@ describe('Apple Pay Express Checkout - Authorization Header Integration', () => 
       });
 
       // Act
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       const customerEmail = 'customer@commerce.com';
       await callPaymentWithAuth(

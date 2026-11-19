@@ -127,7 +127,10 @@ describe('recoverCart', () => {
 
 describe('resumePendingRecovery', () => {
   function seedPending(extra = {}) {
-    window.sessionStorage.setItem(STORAGE_KEYS.PENDING_RECOVERY, JSON.stringify({ ...PENDING, ...extra }));
+    window.sessionStorage.setItem(
+      STORAGE_KEYS.PENDING_RECOVERY,
+      JSON.stringify({ ...PENDING, ...extra }),
+    );
   }
 
   it('does nothing when no recovery is pending', async () => {

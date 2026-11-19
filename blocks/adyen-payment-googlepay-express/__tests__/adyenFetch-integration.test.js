@@ -98,17 +98,15 @@ describe('Google Pay Express Checkout - Authorization Header Integration', () =>
       });
 
       // Simulating the pattern used in the block
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       // Act
       const result = await callPaymentWithAuth(
@@ -159,17 +157,15 @@ describe('Google Pay Express Checkout - Authorization Header Integration', () =>
       });
 
       // Act
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       await callPaymentWithAuth(
         mockAuthContext.backendUrl,
@@ -207,17 +203,15 @@ describe('Google Pay Express Checkout - Authorization Header Integration', () =>
       });
 
       // Act
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       await callPaymentWithAuth(
         mockAuthContext.backendUrl,
@@ -307,17 +301,15 @@ describe('Google Pay Express Checkout - Authorization Header Integration', () =>
       adyenFetch.mockRejectedValue(mockError);
 
       // Act & Assert
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       await expect(
         callPaymentWithAuth(
@@ -337,17 +329,15 @@ describe('Google Pay Express Checkout - Authorization Header Integration', () =>
       });
 
       // Act
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       await callPaymentWithAuth(
         'http://localhost:3000/',
@@ -377,17 +367,15 @@ describe('Google Pay Express Checkout - Authorization Header Integration', () =>
       });
 
       // Act
-      const callPaymentWithAuth = async (backendUrl, payload, ctx) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          ctx,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, ctx) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        ctx,
+      );
 
       await callPaymentWithAuth(
         authContext.backendUrl,

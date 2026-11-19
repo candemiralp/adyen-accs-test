@@ -44,7 +44,7 @@ describe('getCompletedPaymentResultForCart', () => {
   });
 
   it('ignores a result that records no cart at all', () => {
-    const { cartId, ...withoutCart } = completed;
+    const { cartId: _cartId, ...withoutCart } = completed;
     setPaymentResult(withoutCart);
 
     expect(getCompletedPaymentResultForCart(CART_ID)).toBeNull();

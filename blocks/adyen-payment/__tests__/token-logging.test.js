@@ -17,7 +17,7 @@ const consoleMethods = ['debug', 'info', 'log', 'warn', 'error'];
 
 function everythingLogged() {
   return consoleMethods
-    .flatMap((method) => console[method].mock.calls)
+    .flatMap((method) => console[method].mock.calls) // eslint-disable-line no-console
     .map((args) => JSON.stringify(args))
     .join('\n');
 }

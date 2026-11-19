@@ -377,7 +377,7 @@ describe('Commerce Login Block', () => {
       ['a protocol-relative URL', '//evil.example.com/checkout'],
       ['an absolute URL', 'https://evil.example.com/checkout'],
       ['a backslash trick', '/\\evil.example.com'],
-      ['a javascript: URL', 'javascript:alert(1)'],
+      ['a javascript: URL', 'javascript:alert(1)'], // eslint-disable-line no-script-url
     ])('ignores %s', (_label, returnTo) => {
       visit(`?returnTo=${encodeURIComponent(returnTo)}`);
       expect(getSignInDestination()).toBe('/account');

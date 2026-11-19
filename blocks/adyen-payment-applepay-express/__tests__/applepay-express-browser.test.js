@@ -61,7 +61,8 @@ beforeEach(() => {
 
 describe('Apple Pay express block in Chrome', () => {
   it('starts express checkout instead of hiding the block', async () => {
-    // An empty cart on the cart page ends initialisation early; reaching resolveCart() is the point.
+    // An empty cart on the cart page ends initialisation early;
+    // reaching resolveCart() is the point.
     resolveCart.mockResolvedValue({ cartId: 'cart-1', isGuest: true, isEmpty: true });
     const block = document.createElement('div');
 

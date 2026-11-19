@@ -95,17 +95,15 @@ describe('PayPal Express Checkout - Authorization Header Integration', () => {
       });
 
       // Simulating the pattern used in the block
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       // Act
       const result = await callPaymentWithAuth(
@@ -157,17 +155,15 @@ describe('PayPal Express Checkout - Authorization Header Integration', () => {
       });
 
       // Act
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       await callPaymentWithAuth(
         mockAuthContext.backendUrl,
@@ -210,17 +206,15 @@ describe('PayPal Express Checkout - Authorization Header Integration', () => {
       });
 
       // Act
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       await callPaymentWithAuth(
         mockAuthContext.backendUrl,
@@ -261,6 +255,7 @@ describe('PayPal Express Checkout - Authorization Header Integration', () => {
       };
 
       // Act & Assert for each success code
+      /* eslint-disable no-restricted-syntax, no-await-in-loop */
       for (const code of successCodes) {
         adyenFetch.mockResolvedValue({
           json: async () => ({ resultCode: code }),
@@ -288,6 +283,7 @@ describe('PayPal Express Checkout - Authorization Header Integration', () => {
         expect(result.resultCode).toBe(code);
         expect(successCodes).toContain(result.resultCode);
       }
+      /* eslint-enable no-restricted-syntax, no-await-in-loop */
     });
 
     it('should handle payment rejection with Refused resultCode', async () => {
@@ -345,17 +341,15 @@ describe('PayPal Express Checkout - Authorization Header Integration', () => {
       });
 
       // Act
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       const walletEmail = 'guest-paypal@paypal.com';
       await callPaymentWithAuth(
@@ -393,17 +387,15 @@ describe('PayPal Express Checkout - Authorization Header Integration', () => {
       });
 
       // Act
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       const customerEmail = 'customer@commerce.com';
       await callPaymentWithAuth(
@@ -441,17 +433,15 @@ describe('PayPal Express Checkout - Authorization Header Integration', () => {
       });
 
       // Act
-      const callPaymentWithAuth = async (backendUrl, payload, authContext) => {
-        return adyenFetch(
-          `${backendUrl}payments`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          },
-          authContext,
-        );
-      };
+      const callPaymentWithAuth = async (backendUrl, payload, authContext) => adyenFetch(
+        `${backendUrl}payments`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        authContext,
+      );
 
       await callPaymentWithAuth(
         mockAuthContext.backendUrl,
