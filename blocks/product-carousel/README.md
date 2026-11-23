@@ -1,0 +1,48 @@
+# Product Carousel Block
+
+## Overview
+
+The Product Carousel block shows a horizontally scrollable row of products on content pages such as the homepage. Products are fetched from Catalog Service (`productSearch`) through the shared `CS_FETCH_GRAPHQL` instance, either from a catalog category or from an explicit list of SKUs. Each card shows the product image, name, price and an add-to-cart button.
+
+## Configuration Options
+
+Block configuration is read via `readBlockConfig(block)`.
+
+| Option | Type | Default | Effect |
+|--------|------|---------|--------|
+| `category` | string | — | Catalog category URL path (e.g. `gear/bags`). Adds a `categoryPath` filter. |
+| `skus` | string | — | Comma separated SKUs. Adds a `sku` filter and renders products in the given order. Can be combined with `category`. |
+| `limit` | number | `8` | Maximum number of products to render. Ignored for the request size when `skus` is set. |
+
+Example:
+
+| Product Carousel | |
+|---|---|
+| category | gear/bags |
+| limit | 8 |
+
+## Integration
+
+### URL Parameters
+
+This block does not read URL parameters.
+
+### Local Storage
+
+This block does not use localStorage.
+
+### Events
+
+The block does not listen to or emit events. Add to cart calls `cartApi.addProductsToCart` from the cart dropin, which emits the usual cart events (mini cart updates).
+
+## Behavior Patterns
+
+- A visibility filter (`Catalog`, `Catalog, Search`) is always applied.
+- Simple products get an add-to-cart button, disabled when out of stock. Complex products link to the PDP instead.
+- Images are requested from the Commerce image CDN with `width`, `auto=webp` and `quality` parameters and are lazy loaded.
+- On desktop (≥ 900px) four cards are visible and previous/next buttons scroll the row; on mobile two cards are visible and the row is swipeable.
+
+## Error Handling
+
+- If the request fails or returns no products, the block's section gets the `product-carousel-empty` class and is hidden, so authors do not see a broken row on the live site. Errors are logged with `console.warn`.
+- Missing images render an empty placeholder tile; missing prices render an empty price line.
