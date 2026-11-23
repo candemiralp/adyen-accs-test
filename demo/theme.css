@@ -834,7 +834,7 @@ main .product-details__delivery span {
  * Product page gallery layout: the main image takes all width left by the thumbnails (all of it
  * when there is only one photo), without the next-slide peek; thumbnails get a fixed column.
  */
-main .product-details__gallery .pdp-carousel__wrapper {
+main .product-details__gallery .pdp-carousel--thumbnailsColumn .pdp-carousel__wrapper {
   --peak: 0px;
 
   flex: 1 1 0;
@@ -843,7 +843,7 @@ main .product-details__gallery .pdp-carousel__wrapper {
   height: auto;
 }
 
-main .product-details__gallery .pdp-carousel__slide--horizontal {
+main .product-details__gallery .pdp-carousel--thumbnailsColumn .pdp-carousel__slide--horizontal {
   width: 100%;
 }
 
