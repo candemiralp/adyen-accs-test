@@ -33,7 +33,7 @@ This block does not use localStorage.
 
 ### Events
 
-The block does not listen to or emit events. Add to cart calls `cartApi.addProductsToCart` from the cart dropin, which emits the usual cart events (mini cart updates).
+The block does not listen to or emit events. Add to cart calls `cartApi.addProductsToCart` from the cart dropin, which emits the usual cart events (mini cart updates). The heart button in the top-right corner of each card is the wishlist dropin's `WishlistToggle`.
 
 ## Behavior Patterns
 

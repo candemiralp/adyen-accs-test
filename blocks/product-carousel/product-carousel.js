@@ -1,9 +1,12 @@
 import { Button, Icon, provider as UI } from '@dropins/tools/components.js';
 import * as cartApi from '@dropins/storefront-cart/api.js';
+import { WishlistToggle } from '@dropins/storefront-wishlist/containers/WishlistToggle.js';
+import { render as wishlistRender } from '@dropins/storefront-wishlist/render.js';
 import { readBlockConfig } from '../../scripts/aem.js';
 import { CS_FETCH_GRAPHQL, fetchPlaceholders, getProductLink } from '../../scripts/commerce.js';
 
 import '../../scripts/initializers/cart.js';
+import '../../scripts/initializers/wishlist.js';
 
 const PRODUCTS_QUERY = `
   query ProductCarousel($filter: [SearchClauseInput!], $pageSize: Int) {
@@ -85,7 +88,7 @@ function renderCard(product, labels) {
   UI.render(Button, {
     children: labels.Global?.AddProductToCart,
     icon: Icon({ source: 'Cart' }),
-    variant: 'secondary',
+    variant: 'primary',
     size: 'medium',
     ...(isComplex
       ? { href: link }
@@ -95,7 +98,20 @@ function renderCard(product, labels) {
       }),
   })(action);
 
-  li.append(imageLink, name, price, action);
+  const wishlist = document.createElement('div');
+  wishlist.className = 'product-carousel-wishlist';
+  wishlistRender.render(WishlistToggle, {
+    product: {
+      sku: product.sku,
+      name: product.name,
+      urlKey: product.urlKey,
+      inStock: product.inStock,
+      images: product.images,
+    },
+    variant: 'tertiary',
+  })(wishlist);
+
+  li.append(imageLink, wishlist, name, price, action);
   return li;
 }
 
