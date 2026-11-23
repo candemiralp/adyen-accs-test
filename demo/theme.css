@@ -785,3 +785,7 @@ main .product-details__attributes {
 body header nav .nav-tools button.nav-wishlist-button {
   background-size: 21px auto;
 }
+
+main .product-details__gallery .pdp-carousel__thumbnail__span img {
+  mix-blend-mode: multiply;
+}
