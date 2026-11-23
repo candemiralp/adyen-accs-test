@@ -645,29 +645,29 @@ body.columns main > .section:last-child {
 }
 
 /* Testimonials section - without block-like class name */
-.section > div:nth-child(2) {
+.section:where(.testimonials) > div:nth-child(2) {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--spacing-large);
 }
 
-.section > div:nth-child(2) > div {
+.section:where(.testimonials) > div:nth-child(2) > div {
   padding: var(--spacing-big);
   background: var(--color-neutral-100);
   border-radius: var(--shape-border-radius-2);
 }
 
-.section > div:nth-child(2) > div p {
+.section:where(.testimonials) > div:nth-child(2) > div p {
   margin: var(--spacing-small) 0;
   line-height: 1.6;
 }
 
-.section > div:nth-child(2) > div p:first-of-type {
+.section:where(.testimonials) > div:nth-child(2) > div p:first-of-type {
   font-style: italic;
   color: var(--color-neutral-700);
 }
 
-.section > div:nth-child(2) > div p:last-of-type {
+.section:where(.testimonials) > div:nth-child(2) > div p:last-of-type {
   font-weight: 600;
   color: var(--color-neutral-800);
 }
