@@ -86,11 +86,22 @@ main .dropin-button--primary {
   border-radius: 6px;
 }
 
-/* Section headings */
-main .section > .default-content-wrapper h2 {
+/* Section headings that introduce a block (carousels, category tiles, blog) */
+main .section > .default-content-wrapper:has(+ div) h2 {
   margin-bottom: var(--spacing-medium);
   font: var(--type-headline-1-font);
   text-align: center;
+}
+
+/* Text-only pages (blog posts, contact, shipping): readable line length */
+main .section > .default-content-wrapper:only-child {
+  max-width: 800px;
+}
+
+main .section > .default-content-wrapper:only-child img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--shape-border-radius-2);
 }
 
 /*
@@ -441,6 +452,7 @@ footer .footer p {
 
 footer .footer a:any-link {
   color: var(--mystore-ink);
+  font-weight: 400;
   text-decoration: none;
 }
 
