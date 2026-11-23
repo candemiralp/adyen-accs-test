@@ -539,10 +539,13 @@ footer .footer .section:last-child .icon img {
   object-fit: cover;
 }
 
-/* The Apple Pay mark carries its own outline (Apple guidelines), so skip our badge border */
-footer .footer .section:last-child .icon-pay-applepay,
-.checkout-payment-methods .dropin-toggle-button:has(input[value="adyen_applepay"]) .dropin-toggle-button__icon {
+/* The Apple Pay mark carries its own outline and white margin: drop our border, scale the mark up */
+footer .footer .section:last-child .icon-pay-applepay {
   border-color: transparent;
+}
+
+footer .footer .section:last-child .icon-pay-applepay img {
+  transform: scale(1.38);
 }
 
 @media (min-width: 900px) {
@@ -632,4 +635,9 @@ main .dropin-pagination .dropin-pagination_list-item--active button:disabled {
   background: var(--mystore-ink);
   color: white;
   opacity: 1;
+}
+
+/* The Adyen test-mode banner is not needed in the demo checkout */
+.checkout-payment-methods-test-warning {
+  display: none !important;
 }
