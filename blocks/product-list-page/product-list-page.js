@@ -189,6 +189,7 @@ export default async function decorate(block) {
     const totalCount = payload.result?.totalCount || 0;
 
     block.classList.toggle('product-list-page--empty', totalCount === 0);
+    block.classList.toggle('product-list-page--no-facets', !payload.result?.facets?.length);
 
     // Results Info
     $resultInfo.innerHTML = payload.request?.phrase

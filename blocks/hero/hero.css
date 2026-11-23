@@ -5,50 +5,90 @@
 
 .hero {
   position: relative;
-  padding: 40px 24px;
-  min-height: 300px;
+  display: flex;
+  align-items: center;
+  min-height: 360px;
+  padding: var(--spacing-xbig) var(--spacing-medium);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .hero::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgb(0 0 0 / 40%);
+  background: linear-gradient(90deg, rgb(0 0 0 / 60%) 0%, rgb(0 0 0 / 25%) 60%, rgb(0 0 0 / 0%) 100%);
   z-index: 0;
+}
+
+.hero > div,
+.hero > div > div {
+  position: static;
 }
 
 .hero > * {
   position: relative;
   z-index: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+}
+
+.hero h1,
+.hero h2,
+.hero p {
+  max-width: 560px;
+  color: white;
 }
 
 .hero h1 {
-  max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
-  color: white;
+  margin: 0 0 var(--spacing-small);
+  font: var(--type-display-3-font);
+  letter-spacing: var(--type-display-3-letter-spacing);
 }
 
 .hero p {
-  color: white;
+  margin: 0 0 var(--spacing-medium);
+  font: var(--type-body-1-default-font);
+}
+
+.hero p.button-container {
+  margin: 0;
 }
 
 .hero picture {
   position: absolute;
   z-index: -1;
   inset: 0;
-  object-fit: cover;
   box-sizing: border-box;
+  max-width: none;
 }
 
 .hero img {
   object-fit: cover;
+  object-position: 70% center;
   width: 100%;
   height: 100%;
 }
 
 @media (min-width: 900px) {
   .hero {
-    padding: 40px 32px;
+    min-height: 520px;
+    padding: var(--spacing-xxbig) var(--spacing-xbig);
+  }
+
+  .hero h1 {
+    font: var(--type-display-2-font);
+    letter-spacing: var(--type-display-2-letter-spacing);
+  }
+
+  .hero.right::before {
+    background: linear-gradient(270deg, rgb(0 0 0 / 60%) 0%, rgb(0 0 0 / 25%) 50%, rgb(0 0 0 / 0%) 100%);
+  }
+
+  .hero.right h1,
+  .hero.right h2,
+  .hero.right p {
+    margin-left: auto;
   }
 }
