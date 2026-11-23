@@ -32,6 +32,7 @@ import {
   fetchPlaceholders,
   getProductLink,
   getProductSku,
+  isExpressCheckoutEnabled,
 } from '../../scripts/commerce.js';
 import { loadCSS } from '../../scripts/aem.js';
 
@@ -157,7 +158,7 @@ export default async function decorate(block) {
     CarouselThumbnail: (ctx) => {
       if (ctx.mediaType === 'image') {
         tryRenderAemAssetsImage(ctx, {
-          ...imageSlotConfig(ctx),
+          ...imageSlotConfig(ctx, '100px'),
           wrapper: document.createElement('span'),
         });
       }
@@ -166,7 +167,7 @@ export default async function decorate(block) {
     CarouselMainImage: (ctx) => {
       if (ctx.mediaType === 'image') {
         tryRenderAemAssetsImage(ctx, {
-          ...imageSlotConfig(ctx),
+          ...imageSlotConfig(ctx, '(min-width: 900px) 40vw, 80vw'),
         });
       }
     },
@@ -467,7 +468,7 @@ export default async function decorate(block) {
   // Failures are isolated — a missing wallet (e.g. Apple Pay on non-Safari)
   // never breaks the rest of the PDP.
   const pdpSku = product?.sku || getProductSku();
-  if (pdpSku) {
+  if (pdpSku && isExpressCheckoutEnabled()) {
     const expressBlockNames = [
       'adyen-payment-applepay-express',
       'adyen-payment-googlepay-express',
@@ -697,13 +698,14 @@ function setMetaTags(product) {
 /**
  * Returns the configuration for an image slot.
  * @param ctx - The context of the slot.
+ * @param sizes - The `sizes` attribute, so the browser picks a fitting srcset candidate.
  * @returns The configuration for the image slot.
  */
-function imageSlotConfig(ctx) {
+function imageSlotConfig(ctx, sizes) {
   const { data, defaultImageProps } = ctx;
   return {
     alias: data.sku,
-    imageProps: defaultImageProps,
+    imageProps: sizes ? { ...defaultImageProps, sizes } : defaultImageProps,
 
     params: {
       width: defaultImageProps.width,

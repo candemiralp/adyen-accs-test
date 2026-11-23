@@ -1,8 +1,8 @@
-const HERO_WIDTHS = [750, 1200, 1600, 2000, 2800, 3840];
+const HERO_WIDTHS = [750, 1200, 1600, 2000, 2800];
 
 /**
  * Hero block: full-width banner. The default AEM picture tops out at 2000px, which looks soft on
- * wide or high-density screens, so offer a full srcset and let the browser pick.
+ * wide or high-density screens, so offer a srcset up to 2800px and let the browser pick.
  * @param {Element} block The block element
  */
 export default function decorate(block) {

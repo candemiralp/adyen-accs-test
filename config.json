@@ -19,6 +19,7 @@
       "commerce-companies-enabled": false,
       "commerce-assets-enabled": true,
       "adobe-commerce-optimizer": false,
+      "adyen-express-checkout": false,
       "analytics": {
         "base-currency-code": "USD",
         "environment": "Testing",

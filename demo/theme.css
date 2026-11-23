@@ -659,7 +659,7 @@ body header nav {
 body.header-scrolled header .nav-wrapper {
   background-color: rgb(255 255 255 / 85%);
   box-shadow: 0 1px 8px rgb(0 17 44 / 8%);
-  backdrop-filter: saturate(180%) blur(10px);
+  backdrop-filter: blur(6px);
 }
 
 body.header-scrolled header nav .nav-tools {

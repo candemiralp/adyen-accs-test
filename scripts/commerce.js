@@ -720,6 +720,16 @@ function getDefaultSkuFromBlock() {
  * Checks if the current page is a product template page.
  * @returns {boolean} True if the current page matches a product template path
  */
+/**
+ * Whether Adyen express checkout (wallet buttons on the PDP and cart) should load.
+ * Enabled unless `adyen-express-checkout` is set to false in the site config.
+ * @returns {boolean}
+ */
+export function isExpressCheckoutEnabled() {
+  const value = getConfigValue('adyen-express-checkout');
+  return !(value === false || String(value).toLowerCase() === 'false');
+}
+
 export function isProductTemplate() {
   const root = getRootPath();
   const { pathname } = window.location;

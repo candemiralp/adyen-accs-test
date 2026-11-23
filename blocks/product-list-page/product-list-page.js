@@ -98,6 +98,11 @@ export default async function decorate(block) {
     });
   }
 
+  // The first product images are the LCP candidates: fetch them with high priority.
+  const PRIORITY_IMAGES = 2;
+  let renderedImages = 0;
+  events.on('search/result', () => { renderedImages = 0; }, { eager: true });
+
   const getAddToCartButton = (product) => {
     if (product.typename === 'ComplexProductView') {
       const button = document.createElement('div');
@@ -153,9 +158,14 @@ export default async function decorate(block) {
           const anchorWrapper = document.createElement('a');
           anchorWrapper.href = getProductLink(product.urlKey, product.sku);
 
+          renderedImages += 1;
           tryRenderAemAssetsImage(ctx, {
             alias: product.sku,
-            imageProps: defaultImageProps,
+            imageProps: {
+              ...defaultImageProps,
+              sizes: '(min-width: 900px) 25vw, 50vw',
+              ...(renderedImages <= PRIORITY_IMAGES && { fetchpriority: 'high' }),
+            },
             wrapper: anchorWrapper,
             params: {
               width: defaultImageProps.width,

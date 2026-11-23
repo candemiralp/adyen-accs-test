@@ -79,8 +79,8 @@
 <link rel="dns-prefetch" href="https://na1-sandbox.api.commerce.adobe.com" />
 <link rel="preconnect" href="https://checkoutshopper-test.adyen.com" crossorigin />
 <link rel="dns-prefetch" href="https://checkoutshopper-test.adyen.com" />
-<link rel="preconnect" href="https://use.typekit.net" crossorigin />
-<link rel="dns-prefetch" href="https://use.typekit.net" />
+<link rel="preconnect" href="https://na1-static-sandbox.api.commerce.adobe.com" />
+<link rel="dns-prefetch" href="https://na1-static-sandbox.api.commerce.adobe.com" />
 
 <script nonce="aem" type="speculationrules">
     {
@@ -149,8 +149,8 @@
 <link rel="modulepreload" href="/scripts/__dropins__/tools/preact-hooks.js" />
 <link rel="modulepreload" href="/scripts/__dropins__/tools/components.js" />
 
-<!-- Preload primary body font to eliminate FOUT on first visit -->
-<link rel="preload" as="font" href="/fonts/adobe-clean-normal-400.woff2" type="font/woff2" crossorigin />
+<!-- Preload primary body font (Inter, from the demo theme) to eliminate FOUT on first visit -->
+<link rel="preload" as="font" href="/demo/fonts/inter-latin.woff2" type="font/woff2" crossorigin />
 
 <!-- Preload Adyen Web SDK (JS + CSS) on checkout pages to avoid a waterfall.
      The version is read from the session-cached config so the preload href

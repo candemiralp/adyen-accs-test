@@ -37,6 +37,7 @@ import {
   fetchPlaceholders,
   rootLink,
   getProductLink,
+  isExpressCheckoutEnabled,
 } from '../../scripts/commerce.js';
 
 export default async function decorate(block) {
@@ -316,63 +317,67 @@ export default async function decorate(block) {
   // the order summary once each wallet confirms it is available.
   // CSS is loaded explicitly here because dynamic import bypasses AEM's loadBlock, which
   // is normally responsible for injecting a block's stylesheet.
-  const expressBlockNames = [
-    'adyen-payment-applepay-express',
-    'adyen-payment-googlepay-express',
-    'adyen-payment-paypal-express',
-  ];
+  if (isExpressCheckoutEnabled()) {
+    const expressBlockNames = [
+      'adyen-payment-applepay-express',
+      'adyen-payment-googlepay-express',
+      'adyen-payment-paypal-express',
+    ];
 
-  // Hide the express section until at least one button renders; show/hide after settle.
-  $expressCheckout.style.display = 'none';
+    // Hide the express section until at least one button renders; show/hide after settle.
+    $expressCheckout.style.display = 'none';
 
-  // Show a skeleton while wallet availability is checked (isAvailable() takes ~1-3s).
-  // The entire express section is hidden until buttons settle, but the skeleton gives
-  // the right-column the correct height so the layout does not shift when buttons appear.
-  // We show it here by making the express section visible with just the skeleton inside.
-  const expressSkeletonEl = document.createElement('div');
-  expressSkeletonEl.className = 'cart__express-checkout-skeleton';
-  for (let i = 0; i < expressBlockNames.length; i += 1) {
-    const item = document.createElement('div');
-    item.className = 'cart__express-checkout-skeleton__item';
-    expressSkeletonEl.appendChild(item);
-  }
-  $expressButtons.appendChild(expressSkeletonEl);
-  $expressCheckout.style.display = '';
-
-  Promise.allSettled(
-    expressBlockNames.map(async (blockName) => {
-      try {
-        const cssPath = `${window.hlx?.codeBasePath ?? ''}/blocks/${blockName}/${blockName}.css`;
-        const [{ default: decorateExpressBlock }] = await Promise.all([
-          import(`../${blockName}/${blockName}.js`),
-          loadCSS(cssPath),
-        ]);
-        const blockEl = document.createElement('div');
-        blockEl.className = `block ${blockName}`;
-        blockEl.dataset.blockName = blockName;
-        $expressButtons.appendChild(blockEl);
-        await decorateExpressBlock(blockEl);
-        // If the block hid itself (wallet unavailable / empty cart), remove its container too
-        if (blockEl.style.display === 'none') {
-          blockEl.remove();
-        }
-      } catch (err) {
-        console.debug(
-          `[commerce-cart] Failed to load express block ${blockName}:`,
-          err,
-        );
-      }
-    }),
-  ).then(() => {
-    // Remove the skeleton regardless of outcome.
-    expressSkeletonEl.remove();
-    // Show the express section only if at least one wallet button rendered.
-    if ($expressButtons.children.length) {
-      $expressCheckout.style.display = '';
-    } else {
-      $expressCheckout.style.display = 'none';
+    // Show a skeleton while wallet availability is checked (isAvailable() takes ~1-3s).
+    // The entire express section is hidden until buttons settle, but the skeleton gives
+    // the right-column the correct height so the layout does not shift when buttons appear.
+    // We show it here by making the express section visible with just the skeleton inside.
+    const expressSkeletonEl = document.createElement('div');
+    expressSkeletonEl.className = 'cart__express-checkout-skeleton';
+    for (let i = 0; i < expressBlockNames.length; i += 1) {
+      const item = document.createElement('div');
+      item.className = 'cart__express-checkout-skeleton__item';
+      expressSkeletonEl.appendChild(item);
     }
-  });
+    $expressButtons.appendChild(expressSkeletonEl);
+    $expressCheckout.style.display = '';
+
+    Promise.allSettled(
+      expressBlockNames.map(async (blockName) => {
+        try {
+          const cssPath = `${window.hlx?.codeBasePath ?? ''}/blocks/${blockName}/${blockName}.css`;
+          const [{ default: decorateExpressBlock }] = await Promise.all([
+            import(`../${blockName}/${blockName}.js`),
+            loadCSS(cssPath),
+          ]);
+          const blockEl = document.createElement('div');
+          blockEl.className = `block ${blockName}`;
+          blockEl.dataset.blockName = blockName;
+          $expressButtons.appendChild(blockEl);
+          await decorateExpressBlock(blockEl);
+          // If the block hid itself (wallet unavailable / empty cart), remove its container too
+          if (blockEl.style.display === 'none') {
+            blockEl.remove();
+          }
+        } catch (err) {
+          console.debug(
+            `[commerce-cart] Failed to load express block ${blockName}:`,
+            err,
+          );
+        }
+      }),
+    ).then(() => {
+      // Remove the skeleton regardless of outcome.
+      expressSkeletonEl.remove();
+      // Show the express section only if at least one wallet button rendered.
+      if ($expressButtons.children.length) {
+        $expressCheckout.style.display = '';
+      } else {
+        $expressCheckout.style.display = 'none';
+      }
+    });
+  } else {
+    $expressCheckout.style.display = 'none';
+  }
 
   let cartViewEventPublished = false;
   // Events
