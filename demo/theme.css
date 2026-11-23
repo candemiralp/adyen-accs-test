@@ -484,6 +484,9 @@ footer .footer .columns ul {
 
 footer .footer .columns li {
   margin-bottom: var(--spacing-xsmall);
+}
+
+footer .footer .columns li a:any-link {
   font-size: 1.3rem;
   line-height: 2rem;
 }
@@ -619,8 +622,8 @@ main .dropin-pagination-arrow:hover {
   background: var(--mystore-card);
 }
 
-main .dropin-pagination_list-item--active button,
-main .dropin-pagination_list-item--active button:disabled {
+main .dropin-pagination .dropin-pagination_list-item--active button,
+main .dropin-pagination .dropin-pagination_list-item--active button:disabled {
   background: var(--mystore-ink);
   color: white;
   opacity: 1;
