@@ -607,6 +607,16 @@
       "id": "product",
       "components": [
         {
+          "title": "Product Carousel",
+          "id": "product-carousel",
+          "model": "product-carousel",
+          "plugins": {
+            "da": {
+              "type": "key-value-block"
+            }
+          }
+        },
+        {
           "title": "Product Details",
           "id": "product-details",
           "model": "product-details",

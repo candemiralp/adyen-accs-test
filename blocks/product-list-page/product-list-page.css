@@ -120,4 +120,15 @@
         display: flex;
         justify-content: flex-end;
     }
+
+    .block.product-list-page.product-list-page--no-facets .search__wrapper {
+        grid-template-areas:
+            "result-info product-sort"
+            "product-list product-list"
+            "pagination pagination";
+    }
+
+    .block.product-list-page.product-list-page--no-facets .search__facets {
+        display: none;
+    }
 }

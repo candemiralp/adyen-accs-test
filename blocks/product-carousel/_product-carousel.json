@@ -1,0 +1,48 @@
+{
+  "definitions": [
+    {
+      "title": "Product Carousel",
+      "id": "product-carousel",
+      "model": "product-carousel",
+      "plugins": {
+        "da": {
+          "type": "key-value-block"
+        }
+      }
+    }
+  ],
+  "models": [
+    {
+      "id": "product-carousel",
+      "fields": [
+        {
+          "component": "text",
+          "name": "category",
+          "label": "Category URL Path",
+          "description": "URL path of the catalog category, e.g. gear/bags"
+        },
+        {
+          "component": "text",
+          "name": "skus",
+          "label": "SKUs",
+          "description": "Comma separated SKUs to show instead of (or within) a category"
+        },
+        {
+          "component": "number",
+          "name": "limit",
+          "label": "Limit",
+          "value": 8,
+          "description": "Maximum number of products (default: 8)"
+        },
+        {
+          "component": "number",
+          "name": "rows",
+          "label": "Rows",
+          "value": 1,
+          "description": "Rows per slide (1-3, default: 1)"
+        }
+      ]
+    }
+  ],
+  "filters": []
+}

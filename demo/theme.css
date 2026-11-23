@@ -1,0 +1,869 @@
+/*
+ * MyStore demo theme.
+ * Lives outside blocks/, scripts/ and styles/ on purpose: those folders are synced into the
+ * Adyen extension (sync-frontend), this demo branding must not be.
+ */
+
+/* Sections (header, main, footer) are independent, so specificity ordering across them is irrelevant. */
+/* stylelint-disable no-descending-specificity */
+
+@font-face {
+  font-family: inter;
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/demo/fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: inter-fallback;
+  size-adjust: 107%;
+  src: local('Arial');
+}
+
+:root,
+.dropin-design {
+  --mystore-ink: #00112c;
+  --mystore-muted: #687282;
+  --mystore-card: #f7f8f9;
+  --mystore-line: #e6e9eb;
+  --color-brand-300: #4d5a70;
+  --color-brand-500: var(--mystore-ink);
+  --color-brand-600: #1a2b47;
+  --color-brand-700: var(--mystore-ink);
+  --color-neutral-100: var(--mystore-card);
+  --color-neutral-200: var(--mystore-card);
+  --color-neutral-300: var(--mystore-line);
+  --color-neutral-400: #d5d9de;
+  --color-neutral-700: var(--mystore-muted);
+  --color-neutral-800: var(--mystore-ink);
+  --color-neutral-900: var(--mystore-ink);
+  --color-button-hover: #1a2b47;
+  --color-button-active: var(--mystore-ink);
+  --shape-border-radius-1: 6px;
+  --shape-border-radius-2: 8px;
+  --type-base-font-family: inter, inter-fallback, -apple-system, system-ui, sans-serif;
+  --type-display-1-font: normal normal 700 4.8rem/5.6rem var(--type-base-font-family);
+  --type-display-2-font: normal normal 700 4rem/4.8rem var(--type-base-font-family);
+  --type-display-3-font: normal normal 700 3.2rem/4rem var(--type-base-font-family);
+  --type-headline-1-font: normal normal 700 2.4rem/3.2rem var(--type-base-font-family);
+  --type-headline-2-default-font: normal normal 700 2rem/2.8rem var(--type-base-font-family);
+  --type-headline-2-strong-font: normal normal 700 2rem/2.8rem var(--type-base-font-family);
+  --type-body-1-default-font: normal normal 400 1.6rem/2.4rem var(--type-base-font-family);
+  --type-body-1-strong-font: normal normal 700 1.6rem/2.4rem var(--type-base-font-family);
+  --type-body-1-emphasized-font: normal normal 700 1.6rem/2.4rem var(--type-base-font-family);
+  --type-body-2-default-font: normal normal 400 1.4rem/2rem var(--type-base-font-family);
+  --type-body-2-strong-font: normal normal 600 1.4rem/2rem var(--type-base-font-family);
+  --type-body-2-emphasized-font: normal normal 600 1.4rem/2rem var(--type-base-font-family);
+  --type-button-1-font: normal normal 500 1.6rem/2.4rem var(--type-base-font-family);
+  --type-button-2-font: normal normal 500 1.4rem/2rem var(--type-base-font-family);
+  --type-details-caption-1-font: normal normal 400 1.2rem/1.6rem var(--type-base-font-family);
+  --type-details-caption-2-font: normal normal 400 1.2rem/1.6rem var(--type-base-font-family);
+  --type-details-overline-font: normal normal 500 1.2rem/2rem var(--type-base-font-family);
+  --type-display-1-letter-spacing: 0;
+  --type-display-2-letter-spacing: 0;
+  --type-display-3-letter-spacing: 0;
+  --type-headline-1-letter-spacing: 0;
+  --type-headline-2-default-letter-spacing: 0;
+  --type-headline-2-strong-letter-spacing: 0;
+  --type-body-1-default-letter-spacing: 0;
+  --type-body-1-strong-letter-spacing: 0;
+  --type-body-1-emphasized-letter-spacing: 0;
+  --type-body-2-default-letter-spacing: 0;
+  --type-body-2-strong-letter-spacing: 0;
+  --type-body-2-emphasized-letter-spacing: 0;
+  --type-button-1-letter-spacing: 0;
+  --type-button-2-letter-spacing: 0;
+  --type-details-caption-1-letter-spacing: 0;
+  --type-details-caption-2-letter-spacing: 0;
+  --type-details-overline-letter-spacing: 0;
+}
+
+/* Buttons */
+main a.button:any-link,
+main .dropin-button--primary {
+  border-radius: 6px;
+}
+
+/* Section headings that introduce a block (carousels, category tiles, blog) */
+main .section > .default-content-wrapper:has(+ div) h2 {
+  margin-bottom: var(--spacing-medium);
+  font: var(--type-headline-1-font);
+  text-align: center;
+}
+
+/* Text-only pages (blog posts, contact, shipping): readable line length */
+main .section > .default-content-wrapper:only-child {
+  max-width: 800px;
+}
+
+main .section > .default-content-wrapper:only-child h2 {
+  margin: var(--spacing-big) 0 var(--spacing-xsmall);
+  font: var(--type-headline-1-font);
+}
+
+main .section > .default-content-wrapper:only-child img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--shape-border-radius-2);
+}
+
+/*
+ * Product tile, shared by the catalog (product discovery dropin) and the homepage carousels:
+ * light-grey tile, square image, centered name and price, full-width add to cart button,
+ * wishlist heart in the top-right corner.
+ */
+main .product-discovery-product-list__grid {
+  gap: var(--spacing-medium);
+}
+
+main .dropin-product-item-card,
+main .product-carousel .product-carousel-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--shape-border-radius-2);
+  background: var(--mystore-card);
+  text-align: center;
+}
+
+main .dropin-product-item-card__image-container,
+main .product-carousel .product-carousel-image {
+  box-sizing: border-box;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: var(--spacing-medium);
+  border-radius: 0;
+  background: var(--mystore-card);
+}
+
+main .dropin-product-item-card__image,
+main .dropin-product-item-card__image a {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+main .dropin-product-item-card__image img,
+main .product-carousel .product-carousel-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  transform: none;
+}
+
+main .dropin-product-item-card__content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xxsmall);
+  padding: 0 var(--spacing-small) var(--spacing-small);
+}
+
+main .dropin-product-item-card__title a,
+main .product-carousel .product-carousel-name {
+  padding: 0 var(--spacing-small);
+  color: var(--mystore-ink);
+  font: normal normal 600 1.5rem/2rem var(--type-base-font-family);
+  text-decoration: none;
+}
+
+main .dropin-product-item-card__title {
+  padding: 0;
+}
+
+main .dropin-product-item-card__price,
+main .dropin-product-item-card__price .dropin-price,
+main .product-carousel .product-carousel-price {
+  margin: 0;
+  color: var(--mystore-muted);
+  font: normal normal 400 1.3rem/2rem var(--type-base-font-family);
+}
+
+main .dropin-product-item-card__action,
+main .product-carousel .product-carousel-action {
+  width: 100%;
+  margin-top: auto;
+  padding-top: var(--spacing-small);
+}
+
+main .product-carousel .product-carousel-action {
+  box-sizing: border-box;
+  padding: var(--spacing-small) var(--spacing-small) var(--spacing-small);
+}
+
+main .product-carousel .product-carousel-item {
+  gap: var(--spacing-xxsmall);
+}
+
+main .product-discovery-product-actions,
+main .dropin-product-item-card__action > [data-slot-html-element],
+main .product-discovery-product-actions__add-to-cart {
+  display: block;
+  width: 100%;
+}
+
+main .product-discovery-product-actions__add-to-cart .dropin-button,
+main .product-carousel .product-carousel-action .dropin-button {
+  width: 100%;
+  justify-content: center;
+}
+
+main .product-discovery-product-actions__wishlist-toggle,
+main .product-carousel .product-carousel-wishlist {
+  position: absolute;
+  top: var(--spacing-xsmall);
+  right: var(--spacing-xsmall);
+  z-index: 1;
+}
+
+/* Hero: navy-tinted overlay instead of black */
+main .hero-container {
+  margin-bottom: 0;
+}
+
+main .hero picture::after {
+  background: rgb(0 17 44 / 55%);
+}
+
+@media (min-width: 900px) {
+  main .hero.right picture::after {
+    background: linear-gradient(270deg, rgb(0 17 44 / 70%) 0%, rgb(0 17 44 / 30%) 50%, rgb(0 17 44 / 0%) 100%);
+  }
+}
+
+main .hero a.button:any-link {
+  background: white;
+  color: var(--mystore-ink);
+}
+
+/* USP strip: full width, light grey (section style "usp" + columns block) */
+main > .section.usp {
+  margin: 0;
+  padding: var(--spacing-big) 0;
+  background: var(--mystore-card);
+}
+
+main .section.usp .columns > div {
+  gap: var(--spacing-medium);
+}
+
+main .section.usp .columns > div > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--spacing-small);
+  align-content: center;
+}
+
+main .section.usp .columns p:has(.icon) {
+  grid-row: span 2;
+  align-self: center;
+}
+
+main .section.usp .columns .icon {
+  display: block;
+  width: 4rem;
+  height: 4rem;
+}
+
+main .section.usp .columns p {
+  margin: 0;
+}
+
+main .section.usp .columns h3 {
+  margin: 0;
+  font: var(--type-body-1-strong-font);
+}
+
+main .section.usp .columns h3 + p {
+  color: var(--mystore-muted);
+  font: var(--type-body-2-default-font);
+}
+
+/* Category tiles (section style "categories" + cards block) */
+main .section.categories .cards > ul,
+main .section.blog .cards > ul {
+  grid-template-columns: 1fr;
+}
+
+main .section.categories .cards > ul > li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  align-items: center;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--shape-border-radius-2);
+  background: var(--mystore-card);
+  text-align: left;
+}
+
+main .section.categories .cards .cards-card-image {
+  padding: var(--spacing-xsmall);
+}
+
+main .section.categories .cards > ul > li img {
+  aspect-ratio: 1;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  transition: transform 0.3s ease;
+}
+
+main .section.categories .cards > ul > li:hover img {
+  transform: scale(1.04);
+}
+
+main .section.categories .cards .cards-card-body {
+  margin: var(--spacing-small);
+}
+
+main .section.categories .cards h3 {
+  margin: 0;
+  font: var(--type-headline-2-strong-font);
+}
+
+main .section.categories .cards h3 a {
+  color: var(--mystore-ink);
+  text-decoration: none;
+}
+
+main .section.categories .cards h3 a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+main .section.categories .cards p {
+  margin: var(--spacing-xxsmall) 0 0;
+  color: var(--mystore-muted);
+  font: var(--type-body-2-default-font);
+}
+
+/* Blog cards (section style "blog" + cards block) */
+main .section.blog .cards > ul > li {
+  overflow: hidden;
+  border: var(--shape-border-width-1) solid var(--mystore-line);
+  border-radius: var(--shape-border-radius-2);
+}
+
+main .section.blog .cards > ul > li img {
+  aspect-ratio: 16 / 10;
+}
+
+main .section.blog .cards .cards-card-body {
+  margin: var(--spacing-medium);
+}
+
+main .section.blog .cards .cards-card-body > p:first-child {
+  margin: 0;
+  color: var(--mystore-muted);
+  font: var(--type-details-overline-font);
+  text-transform: uppercase;
+}
+
+main .section.blog .cards h3 {
+  margin: var(--spacing-xsmall) 0;
+  font: var(--type-headline-2-strong-font);
+}
+
+main .section.blog .cards h3 a {
+  color: var(--mystore-ink);
+  text-decoration: none;
+}
+
+main .section.blog .cards .cards-card-body p {
+  color: var(--mystore-muted);
+  font: var(--type-body-2-default-font);
+}
+
+main .section.blog .cards .cards-card-body p:last-child {
+  margin-bottom: 0;
+}
+
+main .section.blog .cards .cards-card-body p:last-child a {
+  color: var(--mystore-ink);
+  font: var(--type-body-2-strong-font);
+}
+
+main .section.blog .default-content-wrapper:last-child {
+  margin-top: var(--spacing-medium);
+  text-align: center;
+}
+
+@media (min-width: 600px) {
+  main .section.categories .cards > ul,
+  main .section.blog .cards > ul {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  main .section.categories .cards > ul > li {
+    display: block;
+    text-align: center;
+  }
+
+  main .section.categories .cards .cards-card-image {
+    padding: var(--spacing-big) var(--spacing-big) 0;
+  }
+
+  main .section.categories .cards .cards-card-body {
+    margin: var(--spacing-small) var(--spacing-small) var(--spacing-medium);
+  }
+}
+
+/* Footer */
+footer {
+  border-top: var(--shape-border-width-1) solid var(--mystore-line);
+  background: var(--mystore-card);
+}
+
+footer .footer > div {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+footer .footer .section {
+  padding: var(--spacing-xbig) 0;
+  border-bottom: var(--shape-border-width-1) solid var(--mystore-line);
+}
+
+footer .footer .section:last-child {
+  padding: var(--spacing-medium) 0;
+  border-bottom: 0;
+}
+
+footer .footer h3 {
+  margin: 0 0 var(--spacing-xsmall);
+  font: var(--type-headline-2-strong-font);
+}
+
+footer .footer h4 {
+  margin: 0 0 var(--spacing-small);
+  color: var(--mystore-ink);
+  font: var(--type-body-2-strong-font);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+footer .footer p {
+  color: var(--mystore-muted);
+}
+
+footer .footer a:any-link {
+  color: var(--mystore-ink);
+  font-weight: 400;
+  text-decoration: none;
+}
+
+footer .footer a:hover {
+  text-decoration: underline;
+}
+
+footer .footer .columns > div {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-big) var(--spacing-medium);
+  align-items: start;
+}
+
+footer .footer .columns > div > div {
+  flex: unset;
+}
+
+footer .footer .columns ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+footer .footer .columns li {
+  margin-bottom: var(--spacing-xsmall);
+}
+
+footer .footer .columns p a:any-link {
+  font-size: 1.4rem;
+  line-height: 2rem;
+}
+
+footer .footer .columns li a:any-link {
+  font-size: 1.3rem;
+  line-height: 2rem;
+}
+
+footer .footer .columns p {
+  margin: 0 0 var(--spacing-xsmall);
+}
+
+footer .footer .columns > div > div:first-child > p:first-child a {
+  display: block;
+  width: 91px;
+  height: 43px;
+  margin-bottom: var(--spacing-small);
+  overflow: hidden;
+  background: url('/demo/mystore-logo.svg') no-repeat left center / contain;
+  color: transparent;
+  font-size: 0;
+}
+
+footer .footer .section:last-child .default-content-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-small);
+  align-items: center;
+  justify-content: space-between;
+}
+
+footer .footer .section:last-child p:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xsmall);
+  align-items: center;
+}
+
+footer .footer .section:last-child .icon {
+  width: 4.4rem;
+  height: 2.8rem;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+footer .footer .section:last-child .icon img {
+  object-fit: cover;
+}
+
+/* The Apple Pay mark sits inside a white margin: scale it so its own outline fills the same size */
+footer .footer .section:last-child .icon-pay-applepay img {
+  transform: scale(1.38);
+}
+
+@media (min-width: 900px) {
+  footer .footer .columns > div {
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+  }
+}
+
+/* Header: MyStore logo on the left, menu next to it */
+body header nav .nav-brand {
+  min-width: 91px;
+}
+
+body header nav .nav-brand a {
+  display: block;
+  width: 91px;
+  height: 43px;
+  overflow: hidden;
+  background: url('/demo/mystore-logo.svg') no-repeat center / contain;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  transition: width 0.2s ease, height 0.2s ease;
+}
+
+@media (min-width: 900px) {
+  body header nav .nav-sections .default-content-wrapper > ul > li > p,
+  body header nav .nav-sections .default-content-wrapper > ul > li > p > a {
+    font: var(--type-body-2-strong-font);
+    color: var(--mystore-ink);
+  }
+}
+
+/* Header tools order: search, wishlist, account, cart */
+body header nav .nav-tools .search-wrapper {
+  order: 1;
+}
+
+body header nav .nav-tools .wishlist-wrapper {
+  order: 2;
+}
+
+body header nav .nav-tools .dropdown-wrapper {
+  order: 3;
+}
+
+body header nav .nav-tools .minicart-wrapper {
+  order: 4;
+}
+
+
+/* Express checkout (Apple Pay, Google Pay, PayPal) is not ready for the demo yet */
+.product-details__express-checkout,
+.cart__express-checkout {
+  display: none !important;
+}
+
+/* Catalog pagination: larger, padded page numbers */
+main .dropin-pagination,
+main .dropin-pagination_list {
+  gap: 0 var(--spacing-xsmall);
+}
+
+main .dropin-pagination_list-item,
+main .dropin-pagination_list-item--active {
+  width: auto;
+  height: auto;
+  background: none;
+}
+
+main .dropin-pagination_list-item button,
+main .dropin-pagination-arrow {
+  box-sizing: border-box;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 var(--spacing-xsmall);
+  border-radius: 20px;
+  font: var(--type-body-2-strong-font);
+}
+
+main .dropin-pagination_list-item button:hover,
+main .dropin-pagination-arrow:hover {
+  background: var(--mystore-card);
+}
+
+main .dropin-pagination .dropin-pagination_list-item--active button,
+main .dropin-pagination .dropin-pagination_list-item--active button:disabled {
+  background: var(--mystore-ink);
+  color: white;
+  opacity: 1;
+}
+
+/* The Adyen test-mode banner is not needed in the demo checkout */
+.checkout-payment-methods-test-warning {
+  display: none !important;
+}
+
+/*
+ * Sticky header: fixed on every page. On desktop it matches the height of the USP strip under
+ * the hero; after scrolling (body.header-scrolled, set in demo.js) it shrinks and turns
+ * slightly transparent.
+ */
+body header .nav-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 10;
+  background-color: rgb(255 255 255 / 100%);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+body header nav {
+  transition: height 0.2s ease;
+}
+
+body.header-scrolled header .nav-wrapper {
+  background-color: rgb(255 255 255 / 85%);
+  box-shadow: 0 1px 8px rgb(0 17 44 / 8%);
+  backdrop-filter: saturate(180%) blur(10px);
+}
+
+body.header-scrolled header nav .nav-tools {
+  background: transparent;
+}
+
+@media (min-width: 900px) {
+  :root {
+    --nav-height: 10.8rem;
+  }
+
+  body header nav .nav-brand {
+    min-width: 102px;
+  }
+
+  body header nav .nav-brand a {
+    width: 102px;
+    height: 48px;
+  }
+
+  body.header-scrolled header .nav-wrapper {
+    --nav-height: 6.4rem;
+  }
+
+  body.header-scrolled header nav .nav-brand a {
+    width: 91px;
+    height: 43px;
+  }
+}
+
+/* Checkout inputs and selects: 48px instead of 56px */
+.checkout__main .dropin-input--medium.dropin-input--floating {
+  padding-top: 13px;
+  padding-bottom: 13px;
+}
+
+.checkout__main .dropin-input--medium.dropin-input--floating:focus,
+.checkout__main .dropin-input--medium.dropin-input--floating:not(:placeholder-shown) {
+  padding-top: 21px;
+  padding-bottom: 5px;
+}
+
+.checkout__main .dropin-input-container--floating:focus-within .dropin-input__label--floating,
+.checkout__main .dropin-input--floating:not(:placeholder-shown) ~ .dropin-input__label--floating {
+  font-size: 1.1rem;
+  line-height: 1.4rem;
+  transform: translate(0.1em, -1.2em);
+}
+
+.checkout__main .dropin-picker__medium.dropin-picker__floating select {
+  padding-top: 13px;
+  padding-bottom: 13px;
+}
+
+.checkout__main .dropin-picker__medium.dropin-picker__floating.dropin-picker__selected select {
+  padding-top: 22px;
+  padding-bottom: 4px;
+}
+
+.checkout__main .dropin-picker__medium.dropin-picker__floating.dropin-picker__selected label {
+  top: 12px;
+  font-size: 1.1rem;
+  line-height: 1.4rem;
+}
+
+/*
+ * Header panels (mini cart, wishlist, search, account) hang from the bottom of the header:
+ * the tools wrappers (40px) are vertically centred, so offset by half the header height.
+ */
+body header nav .nav-tools-panel {
+  top: calc(var(--nav-height) / 2 + 20px);
+}
+
+/* Store banner: keep the neon sign in view and leave the left side for the copy */
+main .hero img {
+  object-position: 45% 30%;
+}
+
+@media (min-width: 900px) {
+  main .hero picture::after {
+    background: linear-gradient(90deg, rgb(0 17 44 / 88%) 0%, rgb(0 17 44 / 70%) 35%, rgb(0 17 44 / 10%) 65%, rgb(0 17 44 / 0%) 100%);
+  }
+
+  main .hero h1,
+  main .hero p {
+    max-width: 480px;
+  }
+}
+
+/* Product page gallery: same light-grey tile as the catalog cards */
+main .product-details__gallery .pdp-carousel__slide {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--shape-border-radius-2);
+  background: var(--mystore-card);
+}
+
+main .product-details__gallery .pdp-carousel__slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+
+main .product-details__gallery .pdp-carousel__thumbnail__span {
+  --bg-color: var(--mystore-card);
+
+  border-radius: 4px;
+  background-size: contain;
+  background-blend-mode: multiply;
+}
+
+/* Product page: description full width below gallery and add to cart (moved in demo.js), no Details */
+main .product-details > .product-details__description {
+  margin-top: var(--spacing-xbig);
+  padding: var(--spacing-medium) var(--spacing-big);
+  border: var(--shape-border-width-1) solid var(--mystore-line);
+  border-radius: var(--shape-border-radius-2);
+}
+
+main .product-details__attributes {
+  display: none;
+}
+
+/* Header wishlist heart is a larger, filled glyph than the 24px line icons: draw it smaller */
+body header nav .nav-tools button.nav-wishlist-button {
+  background-size: 21px auto;
+}
+
+main .product-details__gallery .pdp-carousel__thumbnail__span img {
+  mix-blend-mode: multiply;
+}
+
+/* Product page: square thumbnails */
+main .product-details__gallery .pdp-carousel__thumbnail__span,
+main .product-details__gallery .pdp-carousel__thumbnail__span img {
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+/* Product page: delivery info under add to cart (added in demo.js) */
+main .product-details__delivery {
+  display: grid;
+  gap: var(--spacing-small);
+  margin: var(--spacing-medium) 0 0;
+  padding: var(--spacing-medium);
+  list-style: none;
+  border-radius: var(--shape-border-radius-2);
+  background: var(--mystore-card);
+}
+
+main .product-details__delivery li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: var(--spacing-small);
+  align-items: start;
+}
+
+main .product-details__delivery strong {
+  display: block;
+  color: var(--mystore-ink);
+  font: var(--type-body-2-strong-font);
+}
+
+main .product-details__delivery span {
+  display: block;
+  color: var(--mystore-muted);
+  font: var(--type-body-2-default-font);
+}
+
+/*
+ * Product page gallery layout: the main image takes all width left by the thumbnails (all of it
+ * when there is only one photo), without the next-slide peek; thumbnails get a fixed column.
+ */
+main .product-details__gallery .pdp-carousel--thumbnailsColumn .pdp-carousel__wrapper {
+  --peak: 0px;
+
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  height: auto;
+}
+
+main .product-details__gallery .pdp-carousel--thumbnailsColumn .pdp-carousel__slide--horizontal {
+  width: 100%;
+}
+
+main .product-details__gallery .pdp-carousel__controls__container--thumbnailsColumn {
+  flex: 0 0 auto;
+  width: 88px;
+  margin-right: var(--spacing-small);
+}
+
+main .product-details__gallery .pdp-carousel__thumbnail__container {
+  display: block;
+  min-width: 0;
+}
+
+main .product-details__gallery .pdp-carousel__thumbnail__container .pdp-carousel__thumbnail__span {
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+}
+
+main .product-details__gallery .pdp-carousel__controls--thumbnailsColumn {
+  grid-auto-rows: auto;
+}
