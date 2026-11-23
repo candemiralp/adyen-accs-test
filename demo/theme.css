@@ -530,20 +530,14 @@ footer .footer .section:last-child .icon {
   width: 4.4rem;
   height: 2.8rem;
   overflow: hidden;
-  border: var(--shape-border-width-1) solid var(--color-neutral-400);
   border-radius: 4px;
-  background: white;
 }
 
 footer .footer .section:last-child .icon img {
   object-fit: cover;
 }
 
-/* The Apple Pay mark carries its own outline and white margin: drop our border, scale the mark up */
-footer .footer .section:last-child .icon-pay-applepay {
-  border-color: transparent;
-}
-
+/* The Apple Pay mark sits inside a white margin: scale it so its own outline fills the same size */
 footer .footer .section:last-child .icon-pay-applepay img {
   transform: scale(1.38);
 }
@@ -678,12 +672,12 @@ body.header-scrolled header nav .nav-tools {
   }
 
   body header nav .nav-brand {
-    min-width: 116px;
+    min-width: 102px;
   }
 
   body header nav .nav-brand a {
-    width: 116px;
-    height: 55px;
+    width: 102px;
+    height: 48px;
   }
 
   body.header-scrolled header .nav-wrapper {
@@ -696,37 +690,37 @@ body.header-scrolled header nav .nav-tools {
   }
 }
 
-/* Checkout inputs and selects: 44px instead of 56px */
+/* Checkout inputs and selects: 48px instead of 56px */
 .checkout__main .dropin-input--medium.dropin-input--floating {
-  padding-top: 11px;
-  padding-bottom: 11px;
+  padding-top: 13px;
+  padding-bottom: 13px;
 }
 
 .checkout__main .dropin-input--medium.dropin-input--floating:focus,
 .checkout__main .dropin-input--medium.dropin-input--floating:not(:placeholder-shown) {
-  padding-top: 19px;
-  padding-bottom: 3px;
+  padding-top: 21px;
+  padding-bottom: 5px;
 }
 
 .checkout__main .dropin-input-container--floating:focus-within .dropin-input__label--floating,
 .checkout__main .dropin-input--floating:not(:placeholder-shown) ~ .dropin-input__label--floating {
   font-size: 1.1rem;
   line-height: 1.4rem;
-  transform: translate(0.1em, -1.1em);
+  transform: translate(0.1em, -1.2em);
 }
 
 .checkout__main .dropin-picker__medium.dropin-picker__floating select {
-  padding-top: 11px;
-  padding-bottom: 11px;
+  padding-top: 13px;
+  padding-bottom: 13px;
 }
 
 .checkout__main .dropin-picker__medium.dropin-picker__floating.dropin-picker__selected select {
-  padding-top: 20px;
-  padding-bottom: 2px;
+  padding-top: 22px;
+  padding-bottom: 4px;
 }
 
 .checkout__main .dropin-picker__medium.dropin-picker__floating.dropin-picker__selected label {
-  top: 11px;
+  top: 12px;
   font-size: 1.1rem;
   line-height: 1.4rem;
 }
