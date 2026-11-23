@@ -317,8 +317,8 @@
 .checkout-payment-methods .dropin-toggle-button__actionButton {
     height: 100%;
     box-sizing: border-box;
-    padding-top: var(--spacing-small);
-    padding-bottom: var(--spacing-small);
+    padding-top: 10px;
+    padding-bottom: 10px;
 }
 
 .checkout-payment-methods .dropin-toggle-button__content {
@@ -353,4 +353,9 @@
 
 .checkout-payment-methods .dropin-toggle-button:has(input[value="adyen_applepay"]) .dropin-toggle-button__icon svg {
     transform: scale(1.38);
+}
+
+/* ADDED BY ADYEN: an empty terms and conditions block would add a second row gap above Place Order */
+.checkout__terms-and-conditions:has(> .conditional-wrapper:empty) {
+    display: none;
 }
