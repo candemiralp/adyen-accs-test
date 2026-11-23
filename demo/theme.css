@@ -829,3 +829,35 @@ main .product-details__delivery span {
   color: var(--mystore-muted);
   font: var(--type-body-2-default-font);
 }
+
+/*
+ * Product page gallery layout: the main image takes all width left by the thumbnails (all of it
+ * when there is only one photo), without the next-slide peek; thumbnails get a fixed column.
+ */
+main .product-details__gallery .pdp-carousel__wrapper {
+  --peak: 0px;
+
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  height: auto;
+}
+
+main .product-details__gallery .pdp-carousel__slide--horizontal {
+  width: 100%;
+}
+
+main .product-details__gallery .pdp-carousel__controls__container--thumbnailsColumn {
+  flex: 0 0 auto;
+  width: 88px;
+  margin-right: var(--spacing-small);
+}
+
+main .product-details__gallery .pdp-carousel__thumbnail__container {
+  display: block;
+  width: 100%;
+}
+
+main .product-details__gallery .pdp-carousel__controls--thumbnailsColumn {
+  grid-auto-rows: auto;
+}
