@@ -751,12 +751,15 @@ main .hero img {
 
 /* Product page gallery: same light-grey tile as the catalog cards */
 main .product-details__gallery .pdp-carousel__slide {
+  aspect-ratio: 1;
   overflow: hidden;
   border-radius: var(--shape-border-radius-2);
   background: var(--mystore-card);
 }
 
 main .product-details__gallery .pdp-carousel__slide img {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   mix-blend-mode: multiply;
 }
@@ -788,4 +791,41 @@ body header nav .nav-tools button.nav-wishlist-button {
 
 main .product-details__gallery .pdp-carousel__thumbnail__span img {
   mix-blend-mode: multiply;
+}
+
+/* Product page: square thumbnails */
+main .product-details__gallery .pdp-carousel__thumbnail__span,
+main .product-details__gallery .pdp-carousel__thumbnail__span img {
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+/* Product page: delivery info under add to cart (added in demo.js) */
+main .product-details__delivery {
+  display: grid;
+  gap: var(--spacing-small);
+  margin: var(--spacing-medium) 0 0;
+  padding: var(--spacing-medium);
+  list-style: none;
+  border-radius: var(--shape-border-radius-2);
+  background: var(--mystore-card);
+}
+
+main .product-details__delivery li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: var(--spacing-small);
+  align-items: start;
+}
+
+main .product-details__delivery strong {
+  display: block;
+  color: var(--mystore-ink);
+  font: var(--type-body-2-strong-font);
+}
+
+main .product-details__delivery span {
+  display: block;
+  color: var(--mystore-muted);
+  font: var(--type-body-2-default-font);
 }

@@ -30,18 +30,62 @@ const updateHeader = () => document.body.classList.toggle('header-scrolled', win
 window.addEventListener('scroll', updateHeader, { passive: true });
 updateHeader();
 
-// Product page: show the description full width below the gallery and add to cart section.
+// Product page: full-width description below the gallery, delivery info under add to cart.
+const DISPATCH_CUTOFF_HOUR = 22;
+
+function addWorkingDays(date, days) {
+  const result = new Date(date);
+  let added = 0;
+  while (added < days) {
+    result.setDate(result.getDate() + 1);
+    if (result.getDay() !== 0 && result.getDay() !== 6) added += 1;
+  }
+  return result;
+}
+
+function buildDeliveryInfo() {
+  const now = new Date();
+  const days = now.getHours() < DISPATCH_CUTOFF_HOUR ? 1 : 2;
+  const deliveryDate = addWorkingDays(now, days).toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
+  const items = [
+    ['usp-delivery', `Get it by ${deliveryDate}`, `Order before ${DISPATCH_CUTOFF_HOUR}:00 for same-day dispatch`],
+    ['pdp-package', 'Free shipping over €50', 'Otherwise a flat €5 delivery fee'],
+    ['pdp-returns', 'Free 30-day returns', 'Not quite right? Send it back for free'],
+  ];
+  const list = document.createElement('ul');
+  list.className = 'product-details__delivery';
+  list.innerHTML = items.map(([icon, title, text]) => `
+    <li>
+      <img src="${window.hlx?.codeBasePath ?? ''}/icons/${icon}.svg" alt="" width="24" height="24" loading="lazy">
+      <div><strong>${title}</strong><span>${text}</span></div>
+    </li>`).join('');
+  return list;
+}
+
 if (window.location.pathname.includes('/products/')) {
-  const moveDescription = () => {
+  let descriptionMoved = false;
+  let deliveryAdded = false;
+  const enhanceProductPage = () => {
     const wrapper = document.querySelector('.product-details .product-details__wrapper');
-    const description = wrapper?.querySelector('.product-details__right-column .product-details__description');
-    if (!description) return Boolean(wrapper);
-    wrapper.after(description);
+    if (!wrapper) return false;
+    if (!descriptionMoved) {
+      const description = wrapper.querySelector(
+        '.product-details__right-column .product-details__description',
+      );
+      if (description) wrapper.after(description);
+      descriptionMoved = true;
+    }
+    if (!deliveryAdded) {
+      wrapper.querySelector('.product-details__configuration')?.after(buildDeliveryInfo());
+      deliveryAdded = true;
+    }
     return true;
   };
-  if (!moveDescription()) {
+  if (!enhanceProductPage()) {
     const observer = new MutationObserver(() => {
-      if (moveDescription()) observer.disconnect();
+      if (enhanceProductPage()) observer.disconnect();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
   }
