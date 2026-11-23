@@ -855,7 +855,13 @@ main .product-details__gallery .pdp-carousel__controls__container--thumbnailsCol
 
 main .product-details__gallery .pdp-carousel__thumbnail__container {
   display: block;
+  min-width: 0;
+}
+
+main .product-details__gallery .pdp-carousel__thumbnail__container .pdp-carousel__thumbnail__span {
+  box-sizing: border-box;
   width: 100%;
+  height: auto;
 }
 
 main .product-details__gallery .pdp-carousel__controls--thumbnailsColumn {
