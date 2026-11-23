@@ -1,0 +1,228 @@
+/*
+ * MyStore demo theme.
+ * Lives outside blocks/, scripts/ and styles/ on purpose: those folders are synced into the
+ * Adyen extension (sync-frontend), this demo branding must not be.
+ */
+
+@font-face {
+  font-family: inter;
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/demo/fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: inter-fallback;
+  size-adjust: 107%;
+  src: local('Arial');
+}
+
+:root,
+.dropin-design {
+  --mystore-ink: #00112c;
+  --mystore-muted: #687282;
+  --mystore-card: #f7f8f9;
+  --mystore-line: #e6e9eb;
+  --color-brand-300: #4d5a70;
+  --color-brand-500: var(--mystore-ink);
+  --color-brand-600: #1a2b47;
+  --color-brand-700: var(--mystore-ink);
+  --color-neutral-100: var(--mystore-card);
+  --color-neutral-200: var(--mystore-card);
+  --color-neutral-300: var(--mystore-line);
+  --color-neutral-400: #d5d9de;
+  --color-neutral-700: var(--mystore-muted);
+  --color-neutral-800: var(--mystore-ink);
+  --color-neutral-900: var(--mystore-ink);
+  --color-button-hover: #1a2b47;
+  --color-button-active: var(--mystore-ink);
+  --shape-border-radius-1: 6px;
+  --shape-border-radius-2: 8px;
+  --type-base-font-family: inter, inter-fallback, -apple-system, system-ui, sans-serif;
+  --type-display-1-font: normal normal 700 4.8rem/5.6rem var(--type-base-font-family);
+  --type-display-2-font: normal normal 700 4rem/4.8rem var(--type-base-font-family);
+  --type-display-3-font: normal normal 700 3.2rem/4rem var(--type-base-font-family);
+  --type-headline-1-font: normal normal 700 2.4rem/3.2rem var(--type-base-font-family);
+  --type-headline-2-default-font: normal normal 700 2rem/2.8rem var(--type-base-font-family);
+  --type-headline-2-strong-font: normal normal 700 2rem/2.8rem var(--type-base-font-family);
+  --type-body-1-default-font: normal normal 400 1.6rem/2.4rem var(--type-base-font-family);
+  --type-body-1-strong-font: normal normal 700 1.6rem/2.4rem var(--type-base-font-family);
+  --type-body-1-emphasized-font: normal normal 700 1.6rem/2.4rem var(--type-base-font-family);
+  --type-body-2-default-font: normal normal 400 1.4rem/2rem var(--type-base-font-family);
+  --type-body-2-strong-font: normal normal 600 1.4rem/2rem var(--type-base-font-family);
+  --type-body-2-emphasized-font: normal normal 600 1.4rem/2rem var(--type-base-font-family);
+  --type-button-1-font: normal normal 500 1.6rem/2.4rem var(--type-base-font-family);
+  --type-button-2-font: normal normal 500 1.4rem/2rem var(--type-base-font-family);
+  --type-details-caption-1-font: normal normal 400 1.2rem/1.6rem var(--type-base-font-family);
+  --type-details-caption-2-font: normal normal 400 1.2rem/1.6rem var(--type-base-font-family);
+  --type-details-overline-font: normal normal 500 1.2rem/2rem var(--type-base-font-family);
+  --type-display-1-letter-spacing: 0;
+  --type-display-2-letter-spacing: 0;
+  --type-display-3-letter-spacing: 0;
+  --type-headline-1-letter-spacing: 0;
+  --type-headline-2-default-letter-spacing: 0;
+  --type-headline-2-strong-letter-spacing: 0;
+  --type-body-1-default-letter-spacing: 0;
+  --type-body-1-strong-letter-spacing: 0;
+  --type-body-1-emphasized-letter-spacing: 0;
+  --type-body-2-default-letter-spacing: 0;
+  --type-body-2-strong-letter-spacing: 0;
+  --type-body-2-emphasized-letter-spacing: 0;
+  --type-button-1-letter-spacing: 0;
+  --type-button-2-letter-spacing: 0;
+  --type-details-caption-1-letter-spacing: 0;
+  --type-details-caption-2-letter-spacing: 0;
+  --type-details-overline-letter-spacing: 0;
+}
+
+/* Buttons */
+main a.button:any-link,
+main .dropin-button--primary {
+  border-radius: 6px;
+}
+
+/* Section headings above carousels */
+main .section > .default-content-wrapper h2 {
+  font: var(--type-headline-1-font);
+  text-align: center;
+}
+
+/* Remove the grey panel the boilerplate puts behind blocks that follow default content */
+main .section > .product-carousel-wrapper,
+main .section > .product-list-page-wrapper {
+  display: block;
+}
+
+main .section > .product-carousel-wrapper > div,
+main .section > .product-list-page-wrapper > div {
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+
+/* Product cards: light grey tile, centered name and price */
+main .dropin-product-item-card {
+  border: 0;
+  border-radius: var(--shape-border-radius-2);
+  background: var(--mystore-card);
+  overflow: hidden;
+}
+
+main .dropin-product-item-card__image-container {
+  background: var(--mystore-card);
+}
+
+main .dropin-product-item-card__image img {
+  mix-blend-mode: multiply;
+}
+
+main .dropin-product-item-card__content {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  text-align: center;
+  padding: var(--spacing-small) var(--spacing-small) var(--spacing-medium);
+}
+
+main .dropin-product-item-card__title a {
+  color: var(--mystore-ink);
+  font: var(--type-body-1-strong-font);
+}
+
+main .dropin-product-item-card__price,
+main .dropin-product-item-card__price .dropin-price {
+  color: var(--mystore-muted);
+  font: var(--type-details-caption-1-font);
+  font-size: 1.3rem;
+}
+
+main .dropin-product-item-card__action {
+  grid-column: 1;
+}
+
+main .product-discovery-product-actions {
+  justify-content: center;
+}
+
+main .product-carousel .product-carousel-item {
+  align-items: center;
+  padding-bottom: var(--spacing-medium);
+  border-radius: var(--shape-border-radius-2);
+  background: var(--mystore-card);
+  text-align: center;
+}
+
+main .product-carousel .product-carousel-image {
+  width: 100%;
+  border-radius: 0;
+  background: var(--mystore-card);
+}
+
+main .product-carousel .product-carousel-image img {
+  mix-blend-mode: multiply;
+}
+
+main .product-carousel .product-carousel-price {
+  color: var(--mystore-muted);
+  font-size: 1.3rem;
+}
+
+main .product-carousel .product-carousel-action {
+  width: calc(100% - 2 * var(--spacing-small));
+}
+
+/* Hero: navy-tinted overlay instead of black */
+main .hero::before {
+  background: linear-gradient(90deg, rgb(0 17 44 / 70%) 0%, rgb(0 17 44 / 30%) 60%, rgb(0 17 44 / 0%) 100%);
+}
+
+@media (min-width: 900px) {
+  main .hero.right::before {
+    background: linear-gradient(270deg, rgb(0 17 44 / 70%) 0%, rgb(0 17 44 / 30%) 50%, rgb(0 17 44 / 0%) 100%);
+  }
+}
+
+main .hero a.button:any-link {
+  background: white;
+  color: var(--mystore-ink);
+}
+
+/* Footer */
+footer {
+  border-top: 1px solid var(--mystore-line);
+}
+
+footer .footer {
+  background: none;
+}
+
+/* Header: centered MyStore logo, like mystoredemo.io */
+body header nav .nav-brand {
+  justify-self: center;
+  min-width: 0;
+}
+
+body header nav .nav-brand a {
+  display: block;
+  width: 91px;
+  height: 43px;
+  overflow: hidden;
+  background: url('/demo/mystore-logo.svg') no-repeat center / contain;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+}
+
+@media (min-width: 900px) {
+  body header nav {
+    position: relative;
+  }
+
+  body header nav .nav-brand {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
