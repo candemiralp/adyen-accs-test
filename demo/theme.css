@@ -230,7 +230,7 @@ main .hero-container {
 }
 
 main .hero::before {
-  background: linear-gradient(90deg, rgb(0 17 44 / 70%) 0%, rgb(0 17 44 / 30%) 60%, rgb(0 17 44 / 0%) 100%);
+  background: rgb(0 17 44 / 55%);
 }
 
 @media (min-width: 900px) {
@@ -735,10 +735,14 @@ body header nav .nav-tools-panel {
 
 /* Store banner: keep the neon sign in view and leave the left side for the copy */
 main .hero img {
-  object-position: 60% 20%;
+  object-position: 45% center;
 }
 
 @media (min-width: 900px) {
+  main .hero::before {
+    background: linear-gradient(90deg, rgb(0 17 44 / 88%) 0%, rgb(0 17 44 / 70%) 35%, rgb(0 17 44 / 10%) 65%, rgb(0 17 44 / 0%) 100%);
+  }
+
   main .hero h1,
   main .hero p {
     max-width: 480px;
