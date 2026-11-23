@@ -163,8 +163,11 @@ main .product-carousel .product-carousel-image img {
   mix-blend-mode: multiply;
 }
 
-main .product-carousel .product-carousel-price {
+/* Beats the boilerplate "Testimonials" rule (.section > div:nth-child(2) > div p:first-of-type) */
+main .section > div.product-carousel-wrapper:nth-child(2) > div p.product-carousel-price {
+  margin: 0;
   color: var(--mystore-muted);
+  font: var(--type-body-2-default-font);
   font-size: 1.3rem;
 }
 
@@ -200,7 +203,7 @@ footer .footer {
 /* Header: centered MyStore logo, like mystoredemo.io */
 body header nav .nav-brand {
   justify-self: center;
-  min-width: 0;
+  min-width: 91px;
 }
 
 body header nav .nav-brand a {
@@ -224,5 +227,11 @@ body header nav .nav-brand a {
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
+  }
+
+  body header nav .nav-sections .default-content-wrapper > ul > li > p,
+  body header nav .nav-sections .default-content-wrapper > ul > li > p > a {
+    font: var(--type-body-2-strong-font);
+    color: var(--mystore-ink);
   }
 }
