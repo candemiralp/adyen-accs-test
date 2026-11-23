@@ -187,8 +187,11 @@ main .product-carousel .product-carousel-item {
   gap: var(--spacing-xxsmall);
 }
 
-main .product-discovery-product-actions {
+main .product-discovery-product-actions,
+main .dropin-product-item-card__action > [data-slot-html-element],
+main .product-discovery-product-actions__add-to-cart {
   display: block;
+  width: 100%;
 }
 
 main .product-discovery-product-actions__add-to-cart .dropin-button,
@@ -240,11 +243,16 @@ main .section.usp .columns > div > div {
   display: grid;
   grid-template-columns: auto 1fr;
   column-gap: var(--spacing-small);
-  align-items: center;
+  align-content: center;
+}
+
+main .section.usp .columns p:has(.icon) {
+  grid-row: span 2;
+  align-self: center;
 }
 
 main .section.usp .columns .icon {
-  grid-row: span 2;
+  display: block;
   width: 4rem;
   height: 4rem;
 }
@@ -271,15 +279,18 @@ main .section.blog .cards > ul {
 
 main .section.categories .cards > ul > li {
   position: relative;
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  align-items: center;
   overflow: hidden;
   border: 0;
   border-radius: var(--shape-border-radius-2);
   background: var(--mystore-card);
-  text-align: center;
+  text-align: left;
 }
 
 main .section.categories .cards .cards-card-image {
-  padding: var(--spacing-big) var(--spacing-big) 0;
+  padding: var(--spacing-xsmall);
 }
 
 main .section.categories .cards > ul > li img {
@@ -294,7 +305,7 @@ main .section.categories .cards > ul > li:hover img {
 }
 
 main .section.categories .cards .cards-card-body {
-  margin: var(--spacing-small) var(--spacing-small) var(--spacing-medium);
+  margin: var(--spacing-small);
 }
 
 main .section.categories .cards h3 {
@@ -374,6 +385,19 @@ main .section.blog .default-content-wrapper:last-child {
   main .section.categories .cards > ul,
   main .section.blog .cards > ul {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  main .section.categories .cards > ul > li {
+    display: block;
+    text-align: center;
+  }
+
+  main .section.categories .cards .cards-card-image {
+    padding: var(--spacing-big) var(--spacing-big) 0;
+  }
+
+  main .section.categories .cards .cards-card-body {
+    margin: var(--spacing-small) var(--spacing-small) var(--spacing-medium);
   }
 }
 
