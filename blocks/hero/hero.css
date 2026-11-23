@@ -13,13 +13,6 @@
   overflow: hidden;
 }
 
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgb(0 0 0 / 60%) 0%, rgb(0 0 0 / 25%) 60%, rgb(0 0 0 / 0%) 100%);
-  z-index: 0;
-}
 
 .hero > div,
 .hero > div > div {
@@ -64,6 +57,13 @@
   max-width: none;
 }
 
+.hero picture::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgb(0 0 0 / 60%) 0%, rgb(0 0 0 / 25%) 60%, rgb(0 0 0 / 0%) 100%);
+}
+
 .hero img {
   object-fit: cover;
   object-position: 70% center;
@@ -82,7 +82,7 @@
     letter-spacing: var(--type-display-2-letter-spacing);
   }
 
-  .hero.right::before {
+  .hero.right picture::after {
     background: linear-gradient(270deg, rgb(0 0 0 / 60%) 0%, rgb(0 0 0 / 25%) 50%, rgb(0 0 0 / 0%) 100%);
   }
 

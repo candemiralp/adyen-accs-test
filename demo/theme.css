@@ -229,12 +229,12 @@ main .hero-container {
   margin-bottom: 0;
 }
 
-main .hero::before {
+main .hero picture::after {
   background: rgb(0 17 44 / 55%);
 }
 
 @media (min-width: 900px) {
-  main .hero.right::before {
+  main .hero.right picture::after {
     background: linear-gradient(270deg, rgb(0 17 44 / 70%) 0%, rgb(0 17 44 / 30%) 50%, rgb(0 17 44 / 0%) 100%);
   }
 }
@@ -739,7 +739,7 @@ main .hero img {
 }
 
 @media (min-width: 900px) {
-  main .hero::before {
+  main .hero picture::after {
     background: linear-gradient(90deg, rgb(0 17 44 / 88%) 0%, rgb(0 17 44 / 70%) 35%, rgb(0 17 44 / 10%) 65%, rgb(0 17 44 / 0%) 100%);
   }
 

@@ -36,7 +36,7 @@ This block does not listen to or emit events.
 ## Behavior Patterns
 
 - The section wrapper is full width (`.hero-container .hero-wrapper` removes max-width and padding).
-- A gradient overlay keeps white text readable over bright images.
+- A gradient overlay (drawn on `picture::after`, so it always sits directly on the image) keeps white text readable over bright images.
 - Minimum height is 360px on mobile and 520px on desktop.
 
 ## Error Handling
