@@ -748,3 +748,40 @@ main .hero img {
     max-width: 480px;
   }
 }
+
+/* Product page gallery: same light-grey tile as the catalog cards */
+main .product-details__gallery .pdp-carousel__slide {
+  overflow: hidden;
+  border-radius: var(--shape-border-radius-2);
+  background: var(--mystore-card);
+}
+
+main .product-details__gallery .pdp-carousel__slide img {
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+
+main .product-details__gallery .pdp-carousel__thumbnail__span {
+  --bg-color: var(--mystore-card);
+
+  border-radius: 4px;
+  background-size: contain;
+  background-blend-mode: multiply;
+}
+
+/* Product page: description full width below gallery and add to cart (moved in demo.js), no Details */
+main .product-details > .product-details__description {
+  margin-top: var(--spacing-xbig);
+  padding: var(--spacing-medium) var(--spacing-big);
+  border: var(--shape-border-width-1) solid var(--mystore-line);
+  border-radius: var(--shape-border-radius-2);
+}
+
+main .product-details__attributes {
+  display: none;
+}
+
+/* Header wishlist heart is a larger, filled glyph than the 24px line icons: draw it smaller */
+body header nav .nav-tools button.nav-wishlist-button {
+  background-size: 21px auto;
+}

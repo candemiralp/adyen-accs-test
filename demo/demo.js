@@ -29,3 +29,20 @@ if (window.location.pathname.startsWith('/checkout')) {
 const updateHeader = () => document.body.classList.toggle('header-scrolled', window.scrollY > 24);
 window.addEventListener('scroll', updateHeader, { passive: true });
 updateHeader();
+
+// Product page: show the description full width below the gallery and add to cart section.
+if (window.location.pathname.includes('/products/')) {
+  const moveDescription = () => {
+    const wrapper = document.querySelector('.product-details .product-details__wrapper');
+    const description = wrapper?.querySelector('.product-details__right-column .product-details__description');
+    if (!description) return Boolean(wrapper);
+    wrapper.after(description);
+    return true;
+  };
+  if (!moveDescription()) {
+    const observer = new MutationObserver(() => {
+      if (moveDescription()) observer.disconnect();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+}
