@@ -484,6 +484,8 @@ footer .footer .columns ul {
 
 footer .footer .columns li {
   margin-bottom: var(--spacing-xsmall);
+  font-size: 1.3rem;
+  line-height: 2rem;
 }
 
 footer .footer .columns p {
@@ -529,6 +531,12 @@ footer .footer .section:last-child .icon img {
   object-fit: cover;
 }
 
+/* The Apple Pay mark carries its own outline (Apple guidelines), so skip our badge border */
+footer .footer .section:last-child .icon-pay-applepay,
+.checkout-payment-methods .dropin-toggle-button:has(input[value="adyen_applepay"]) .dropin-toggle-button__icon {
+  border-color: transparent;
+}
+
 @media (min-width: 900px) {
   footer .footer .columns > div {
     grid-template-columns: 2fr 1fr 1fr 1fr;
@@ -557,4 +565,63 @@ body header nav .nav-brand a {
     font: var(--type-body-2-strong-font);
     color: var(--mystore-ink);
   }
+}
+
+/* Header tools order: search, wishlist, account, cart */
+body header nav .nav-tools .search-wrapper {
+  order: 1;
+}
+
+body header nav .nav-tools .wishlist-wrapper {
+  order: 2;
+}
+
+body header nav .nav-tools .dropdown-wrapper {
+  order: 3;
+}
+
+body header nav .nav-tools .minicart-wrapper {
+  order: 4;
+}
+
+
+/* Express checkout (Apple Pay, Google Pay, PayPal) is not ready for the demo yet */
+.product-details__express-checkout,
+.cart__express-checkout {
+  display: none !important;
+}
+
+/* Catalog pagination: larger, padded page numbers */
+main .dropin-pagination,
+main .dropin-pagination_list {
+  gap: 0 var(--spacing-xsmall);
+}
+
+main .dropin-pagination_list-item,
+main .dropin-pagination_list-item--active {
+  width: auto;
+  height: auto;
+  background: none;
+}
+
+main .dropin-pagination_list-item button,
+main .dropin-pagination-arrow {
+  box-sizing: border-box;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 var(--spacing-xsmall);
+  border-radius: 20px;
+  font: var(--type-body-2-strong-font);
+}
+
+main .dropin-pagination_list-item button:hover,
+main .dropin-pagination-arrow:hover {
+  background: var(--mystore-card);
+}
+
+main .dropin-pagination_list-item--active button,
+main .dropin-pagination_list-item--active button:disabled {
+  background: var(--mystore-ink);
+  color: white;
+  opacity: 1;
 }
