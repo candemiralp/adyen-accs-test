@@ -31,6 +31,7 @@ const PRODUCTS_QUERY = `
   }
 `;
 
+const DESKTOP = window.matchMedia('(min-width: 900px)');
 const IMAGE_SIZE = 300;
 const IMAGE_WIDTHS = [IMAGE_SIZE, IMAGE_SIZE * 2];
 
@@ -53,7 +54,7 @@ function imageUrl(url, width) {
 
 function renderCard(product, labels) {
   const link = getProductLink(product.urlKey, product.sku);
-  const li = document.createElement('li');
+  const li = document.createElement('div');
   li.className = 'product-carousel-item';
 
   const image = product.images?.[0];
@@ -115,6 +116,20 @@ function renderCard(product, labels) {
   return li;
 }
 
+function renderPages(list, cards, rows) {
+  const perPage = (DESKTOP.matches ? 4 : 2) * rows;
+  const pageCount = Math.ceil(cards.length / perPage);
+  const pages = Array.from({ length: pageCount }, (_, i) => {
+    const page = document.createElement('li');
+    page.className = 'product-carousel-page';
+    page.setAttribute('aria-label', `${i + 1} of ${pageCount}`);
+    page.append(...cards.slice(i * perPage, (i + 1) * perPage));
+    return page;
+  });
+  list.replaceChildren(...pages);
+  list.scrollLeft = 0;
+}
+
 function setupNavigation(block, list) {
   const nav = document.createElement('div');
   nav.className = 'product-carousel-nav';
@@ -125,7 +140,7 @@ function setupNavigation(block, list) {
     button.setAttribute('aria-label', label);
     button.addEventListener('click', () => {
       const sign = direction === 'next' ? 1 : -1;
-      list.scrollBy({ left: sign * list.clientWidth * 0.9, behavior: 'smooth' });
+      list.scrollBy({ left: sign * list.clientWidth, behavior: 'smooth' });
     });
     return button;
   };
@@ -134,6 +149,7 @@ function setupNavigation(block, list) {
   nav.append(prev, next);
 
   const update = () => {
+    nav.hidden = list.scrollWidth <= list.clientWidth + 1;
     prev.disabled = list.scrollLeft <= 1;
     next.disabled = list.scrollLeft + list.clientWidth >= list.scrollWidth - 1;
   };
@@ -141,17 +157,19 @@ function setupNavigation(block, list) {
   window.addEventListener('resize', update);
   block.append(nav);
   requestAnimationFrame(update);
+  return update;
 }
 
 /**
  * Product Carousel block
  * Config rows: `category` (catalog URL path, e.g. gear/bags), `skus` (comma separated),
- * `limit` (max number of products, default 8).
+ * `limit` (max number of products, default 8), `rows` (rows per slide, default 1).
  * @param {Element} block The block element
  */
 export default async function decorate(block) {
   const config = readBlockConfig(block);
   const limit = parseInt(config.limit, 10) || 8;
+  const rows = Math.min(Math.max(parseInt(config.rows, 10) || 1, 1), 3);
   const skus = (config.skus || '').split(',').map((s) => s.trim()).filter(Boolean);
   const filter = [{ attribute: 'visibility', in: ['Catalog', 'Catalog, Search'] }];
   if (skus.length) filter.push({ attribute: 'sku', in: skus });
@@ -181,6 +199,11 @@ export default async function decorate(block) {
     return;
   }
 
-  list.append(...products.slice(0, limit).map((p) => renderCard(p, labels)));
-  setupNavigation(block, list);
+  const cards = products.slice(0, limit).map((p) => renderCard(p, labels));
+  renderPages(list, cards, rows);
+  const updateNavigation = setupNavigation(block, list);
+  DESKTOP.addEventListener('change', () => {
+    renderPages(list, cards, rows);
+    updateNavigation();
+  });
 }

@@ -565,6 +565,13 @@
         "label": "Limit",
         "value": 8,
         "description": "Maximum number of products (default: 8)"
+      },
+      {
+        "component": "number",
+        "name": "rows",
+        "label": "Rows",
+        "value": 1,
+        "description": "Rows per slide (1-3, default: 1)"
       }
     ]
   },

@@ -5,7 +5,7 @@
 .product-carousel .product-carousel-list {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: calc((100% - var(--spacing-medium)) / 2);
+  grid-auto-columns: 100%;
   gap: var(--spacing-medium);
   margin: 0;
   padding: 0 0 var(--spacing-small);
@@ -19,12 +19,19 @@
   display: none;
 }
 
+.product-carousel .product-carousel-page {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-medium);
+  align-content: start;
+  scroll-snap-align: start;
+}
+
 .product-carousel .product-carousel-item {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xsmall);
-  scroll-snap-align: start;
 }
 
 .product-carousel .product-carousel-wishlist {
@@ -79,51 +86,51 @@
 }
 
 .product-carousel .product-carousel-nav {
+  display: flex;
+  gap: var(--spacing-xsmall);
+  position: absolute;
+  top: calc(-1 * var(--spacing-xxbig));
+  right: 0;
+}
+
+.product-carousel .product-carousel-nav[hidden] {
   display: none;
 }
 
+.product-carousel .product-carousel-nav button {
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: var(--shape-border-width-1) solid var(--color-neutral-400);
+  border-radius: 50%;
+  background: var(--color-neutral-50);
+  cursor: pointer;
+}
+
+.product-carousel .product-carousel-nav button::after {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  margin: auto;
+  border-top: 2px solid var(--color-neutral-800);
+  border-right: 2px solid var(--color-neutral-800);
+  transform: translateX(-2px) rotate(45deg);
+}
+
+.product-carousel .product-carousel-nav .product-carousel-prev::after {
+  transform: translateX(2px) rotate(-135deg);
+}
+
+.product-carousel .product-carousel-nav button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 @media (min-width: 900px) {
-  .product-carousel .product-carousel-list {
-    grid-auto-columns: calc((100% - 3 * var(--spacing-medium)) / 4);
-  }
-
-  .product-carousel .product-carousel-nav {
-    display: flex;
-    gap: var(--spacing-xsmall);
-    position: absolute;
-    top: calc(-1 * var(--spacing-xxbig));
-    right: 0;
-  }
-
-  .product-carousel .product-carousel-nav button {
-    width: 40px;
-    height: 40px;
-    margin: 0;
-    padding: 0;
-    border: var(--shape-border-width-1) solid var(--color-neutral-400);
-    border-radius: 50%;
-    background: var(--color-neutral-50);
-    cursor: pointer;
-  }
-
-  .product-carousel .product-carousel-nav button::after {
-    content: '';
-    display: block;
-    width: 10px;
-    height: 10px;
-    margin: auto;
-    border-top: 2px solid var(--color-neutral-800);
-    border-right: 2px solid var(--color-neutral-800);
-    transform: translateX(-2px) rotate(45deg);
-  }
-
-  .product-carousel .product-carousel-nav .product-carousel-prev::after {
-    transform: translateX(2px) rotate(-135deg);
-  }
-
-  .product-carousel .product-carousel-nav button:disabled {
-    opacity: 0.4;
-    cursor: default;
+  .product-carousel .product-carousel-page {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

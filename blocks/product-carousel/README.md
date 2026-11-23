@@ -13,6 +13,7 @@ Block configuration is read via `readBlockConfig(block)`.
 | `category` | string | — | Catalog category URL path (e.g. `gear/bags`). Adds a `categoryPath` filter. |
 | `skus` | string | — | Comma separated SKUs. Adds a `sku` filter and renders products in the given order. Can be combined with `category`. |
 | `limit` | number | `8` | Maximum number of products to render. Ignored for the request size when `skus` is set. |
+| `rows` | number | `1` | Rows per slide (1-3). Each slide shows 4 columns on desktop and 2 on mobile, so `rows: 2` gives 4x2 slides. |
 
 Example:
 
@@ -40,7 +41,7 @@ The block does not listen to or emit events. Add to cart calls `cartApi.addProdu
 - A visibility filter (`Catalog`, `Catalog, Search`) is always applied.
 - Simple products get an add-to-cart button, disabled when out of stock. Complex products link to the PDP instead.
 - Images are requested from the Commerce image CDN with `width`, `auto=webp` and `quality` parameters and are lazy loaded.
-- On desktop (≥ 900px) four cards are visible and previous/next buttons scroll the row; on mobile two cards are visible and the row is swipeable.
+- Products are grouped into slides of `columns x rows` cards (4 columns from 900px, 2 below). Previous/next buttons move one slide at a time and are hidden when everything fits on one slide; slides can also be swiped. Slides are rebuilt when crossing the 900px breakpoint.
 
 ## Error Handling
 
