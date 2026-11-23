@@ -568,6 +568,7 @@ body header nav .nav-brand a {
   color: transparent;
   font-size: 0;
   line-height: 0;
+  transition: width 0.2s ease, height 0.2s ease;
 }
 
 @media (min-width: 900px) {
@@ -640,4 +641,92 @@ main .dropin-pagination .dropin-pagination_list-item--active button:disabled {
 /* The Adyen test-mode banner is not needed in the demo checkout */
 .checkout-payment-methods-test-warning {
   display: none !important;
+}
+
+/*
+ * Sticky header: fixed on every page. On desktop it matches the height of the USP strip under
+ * the hero; after scrolling (body.header-scrolled, set in demo.js) it shrinks and turns
+ * slightly transparent.
+ */
+body header .nav-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 10;
+  background-color: rgb(255 255 255 / 100%);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+body header nav {
+  transition: height 0.2s ease;
+}
+
+body.header-scrolled header .nav-wrapper {
+  background-color: rgb(255 255 255 / 85%);
+  box-shadow: 0 1px 8px rgb(0 17 44 / 8%);
+  backdrop-filter: saturate(180%) blur(10px);
+}
+
+body.header-scrolled header nav .nav-tools {
+  background: transparent;
+}
+
+@media (min-width: 900px) {
+  :root {
+    --nav-height: 10.8rem;
+  }
+
+  body header nav .nav-brand {
+    min-width: 116px;
+  }
+
+  body header nav .nav-brand a {
+    width: 116px;
+    height: 55px;
+  }
+
+  body.header-scrolled header .nav-wrapper {
+    --nav-height: 6.4rem;
+  }
+
+  body.header-scrolled header nav .nav-brand a {
+    width: 91px;
+    height: 43px;
+  }
+}
+
+/* Checkout inputs and selects: 44px instead of 56px */
+.checkout__main .dropin-input--medium.dropin-input--floating {
+  padding-top: 11px;
+  padding-bottom: 11px;
+}
+
+.checkout__main .dropin-input--medium.dropin-input--floating:focus,
+.checkout__main .dropin-input--medium.dropin-input--floating:not(:placeholder-shown) {
+  padding-top: 19px;
+  padding-bottom: 3px;
+}
+
+.checkout__main .dropin-input-container--floating:focus-within .dropin-input__label--floating,
+.checkout__main .dropin-input--floating:not(:placeholder-shown) ~ .dropin-input__label--floating {
+  font-size: 1.1rem;
+  line-height: 1.4rem;
+  transform: translate(0.1em, -1.1em);
+}
+
+.checkout__main .dropin-picker__medium.dropin-picker__floating select {
+  padding-top: 11px;
+  padding-bottom: 11px;
+}
+
+.checkout__main .dropin-picker__medium.dropin-picker__floating.dropin-picker__selected select {
+  padding-top: 20px;
+  padding-bottom: 2px;
+}
+
+.checkout__main .dropin-picker__medium.dropin-picker__floating.dropin-picker__selected label {
+  top: 11px;
+  font-size: 1.1rem;
+  line-height: 1.4rem;
 }

@@ -24,3 +24,8 @@ if (window.location.pathname.startsWith('/checkout')) {
     };
   });
 }
+
+// Shrink the sticky header once the page scrolls (styles in demo/theme.css).
+const updateHeader = () => document.body.classList.toggle('header-scrolled', window.scrollY > 24);
+window.addEventListener('scroll', updateHeader, { passive: true });
+updateHeader();
