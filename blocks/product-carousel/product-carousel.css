@@ -87,10 +87,9 @@
 
 .product-carousel .product-carousel-nav {
   display: flex;
+  justify-content: center;
   gap: var(--spacing-xsmall);
-  position: absolute;
-  top: calc(-1 * var(--spacing-xxbig));
-  right: 0;
+  margin-top: var(--spacing-small);
 }
 
 .product-carousel .product-carousel-nav[hidden] {
@@ -131,6 +130,13 @@
 @media (min-width: 900px) {
   .product-carousel .product-carousel-page {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .product-carousel .product-carousel-nav {
+    position: absolute;
+    top: calc(-1 * var(--spacing-xxbig));
+    right: 0;
+    margin-top: 0;
   }
 }
 

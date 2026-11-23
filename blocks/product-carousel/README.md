@@ -41,7 +41,7 @@ The block does not listen to or emit events. Add to cart calls `cartApi.addProdu
 - A visibility filter (`Catalog`, `Catalog, Search`) is always applied.
 - Simple products get an add-to-cart button, disabled when out of stock. Complex products link to the PDP instead.
 - Images are requested from the Commerce image CDN with `width`, `auto=webp` and `quality` parameters and are lazy loaded.
-- Products are grouped into slides of `columns x rows` cards (4 columns from 900px, 2 below). Previous/next buttons move one slide at a time and are hidden when everything fits on one slide; slides can also be swiped. Slides are rebuilt when crossing the 900px breakpoint.
+- Products are grouped into slides of `columns x rows` cards (4 columns from 900px, 2 below). Previous/next buttons (top right on desktop, below the slides on mobile) move one slide at a time and are hidden when everything fits on one slide; slides can also be swiped. Slides are rebuilt when crossing the 900px breakpoint.
 
 ## Error Handling
 

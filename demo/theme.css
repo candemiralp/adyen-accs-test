@@ -486,6 +486,11 @@ footer .footer .columns li {
   margin-bottom: var(--spacing-xsmall);
 }
 
+footer .footer .columns p a:any-link {
+  font-size: 1.4rem;
+  line-height: 2rem;
+}
+
 footer .footer .columns li a:any-link {
   font-size: 1.3rem;
   line-height: 2rem;
