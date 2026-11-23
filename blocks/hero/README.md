@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Hero block renders a full-width banner with a background image, a heading, optional copy and call-to-action buttons. It is styling-only (`hero.js` is empty); the markup comes from the authored content. A hero is also auto-built by `buildHeroBlock` in `scripts/scripts.js` when a page starts with a picture followed by an `h1`.
+The Hero block renders a full-width banner with a background image, a heading, optional copy and call-to-action buttons. The markup comes from the authored content; `hero.js` only replaces the default picture sources (which stop at 2000px) with a full `srcset` from 750px to 3840px, so the banner stays sharp on wide and high-density screens. A hero is also auto-built by `buildHeroBlock` in `scripts/scripts.js` when a page starts with a picture followed by an `h1`.
 
 ## Configuration Options
 

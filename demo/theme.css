@@ -735,7 +735,7 @@ body header nav .nav-tools-panel {
 
 /* Store banner: keep the neon sign in view and leave the left side for the copy */
 main .hero img {
-  object-position: 45% center;
+  object-position: 45% 30%;
 }
 
 @media (min-width: 900px) {
