@@ -724,3 +724,23 @@ body.header-scrolled header nav .nav-tools {
   font-size: 1.1rem;
   line-height: 1.4rem;
 }
+
+/*
+ * Header panels (mini cart, wishlist, search, account) hang from the bottom of the header:
+ * the tools wrappers (40px) are vertically centred, so offset by half the header height.
+ */
+body header nav .nav-tools-panel {
+  top: calc(var(--nav-height) / 2 + 20px);
+}
+
+/* Store banner: keep the neon sign in view and leave the left side for the copy */
+main .hero img {
+  object-position: 60% 20%;
+}
+
+@media (min-width: 900px) {
+  main .hero h1,
+  main .hero p {
+    max-width: 480px;
+  }
+}
