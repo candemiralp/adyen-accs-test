@@ -317,6 +317,8 @@
 .checkout-payment-methods .dropin-toggle-button__actionButton {
     height: 100%;
     box-sizing: border-box;
+    padding-top: var(--spacing-small);
+    padding-bottom: var(--spacing-small);
 }
 
 .checkout-payment-methods .dropin-toggle-button__content {
@@ -342,4 +344,13 @@
     width: 100%;
     height: 100%;
     margin: 0;
+}
+
+/* The Apple Pay mark has its own outline and white margin: drop our border and scale the mark to fill the badge */
+.checkout-payment-methods .dropin-toggle-button:has(input[value="adyen_applepay"]) .dropin-toggle-button__icon {
+    border-color: transparent;
+}
+
+.checkout-payment-methods .dropin-toggle-button:has(input[value="adyen_applepay"]) .dropin-toggle-button__icon svg {
+    transform: scale(1.38);
 }
