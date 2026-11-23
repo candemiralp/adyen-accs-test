@@ -4,6 +4,9 @@
  * Adyen extension (sync-frontend), this demo branding must not be.
  */
 
+/* Sections (header, main, footer) are independent, so specificity ordering across them is irrelevant. */
+/* stylelint-disable no-descending-specificity */
+
 @font-face {
   font-family: inter;
   font-style: normal;
@@ -83,99 +86,130 @@ main .dropin-button--primary {
   border-radius: 6px;
 }
 
-/* Section headings above carousels */
+/* Section headings */
 main .section > .default-content-wrapper h2 {
+  margin-bottom: var(--spacing-medium);
   font: var(--type-headline-1-font);
   text-align: center;
 }
 
-/* Remove the grey panel the boilerplate puts behind blocks that follow default content */
-main .section > .product-carousel-wrapper,
-main .section > .product-list-page-wrapper {
-  display: block;
+/*
+ * Product tile, shared by the catalog (product discovery dropin) and the homepage carousels:
+ * light-grey tile, square image, centered name and price, full-width add to cart button,
+ * wishlist heart in the top-right corner.
+ */
+main .product-discovery-product-list__grid {
+  gap: var(--spacing-medium);
 }
 
-main .section > .product-carousel-wrapper > div,
-main .section > .product-list-page-wrapper > div {
-  padding: 0;
-  background: none;
-  border-radius: 0;
-}
-
-/* Product cards: light grey tile, centered name and price */
-main .dropin-product-item-card {
+main .dropin-product-item-card,
+main .product-carousel .product-carousel-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  margin: 0;
+  overflow: hidden;
   border: 0;
   border-radius: var(--shape-border-radius-2);
   background: var(--mystore-card);
-  overflow: hidden;
-}
-
-main .dropin-product-item-card__image-container {
-  background: var(--mystore-card);
-}
-
-main .dropin-product-item-card__image img {
-  mix-blend-mode: multiply;
-}
-
-main .dropin-product-item-card__content {
-  grid-template-columns: 1fr;
-  justify-items: center;
-  text-align: center;
-  padding: var(--spacing-small) var(--spacing-small) var(--spacing-medium);
-}
-
-main .dropin-product-item-card__title a {
-  color: var(--mystore-ink);
-  font: var(--type-body-1-strong-font);
-}
-
-main .dropin-product-item-card__price,
-main .dropin-product-item-card__price .dropin-price {
-  color: var(--mystore-muted);
-  font: var(--type-details-caption-1-font);
-  font-size: 1.3rem;
-}
-
-main .dropin-product-item-card__action {
-  grid-column: 1;
-}
-
-main .product-discovery-product-actions {
-  justify-content: center;
-}
-
-main .product-carousel .product-carousel-item {
-  align-items: center;
-  padding-bottom: var(--spacing-medium);
-  border-radius: var(--shape-border-radius-2);
-  background: var(--mystore-card);
   text-align: center;
 }
 
+main .dropin-product-item-card__image-container,
 main .product-carousel .product-carousel-image {
+  box-sizing: border-box;
   width: 100%;
+  aspect-ratio: 1;
+  padding: var(--spacing-medium);
   border-radius: 0;
   background: var(--mystore-card);
 }
 
-main .product-carousel .product-carousel-image img {
-  mix-blend-mode: multiply;
+main .dropin-product-item-card__image,
+main .dropin-product-item-card__image a {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-/* Beats the boilerplate "Testimonials" rule (.section > div:nth-child(2) > div p:first-of-type) */
-main .section > div.product-carousel-wrapper:nth-child(2) > div p.product-carousel-price {
+main .dropin-product-item-card__image img,
+main .product-carousel .product-carousel-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  transform: none;
+}
+
+main .dropin-product-item-card__content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xxsmall);
+  padding: 0 var(--spacing-small) var(--spacing-small);
+}
+
+main .dropin-product-item-card__title a,
+main .product-carousel .product-carousel-name {
+  padding: 0 var(--spacing-small);
+  color: var(--mystore-ink);
+  font: normal normal 600 1.5rem/2rem var(--type-base-font-family);
+  text-decoration: none;
+}
+
+main .dropin-product-item-card__title {
+  padding: 0;
+}
+
+main .dropin-product-item-card__price,
+main .dropin-product-item-card__price .dropin-price,
+main .product-carousel .product-carousel-price {
   margin: 0;
   color: var(--mystore-muted);
-  font: var(--type-body-2-default-font);
-  font-size: 1.3rem;
+  font: normal normal 400 1.3rem/2rem var(--type-base-font-family);
+}
+
+main .dropin-product-item-card__action,
+main .product-carousel .product-carousel-action {
+  width: 100%;
+  margin-top: auto;
+  padding-top: var(--spacing-small);
 }
 
 main .product-carousel .product-carousel-action {
-  width: calc(100% - 2 * var(--spacing-small));
+  box-sizing: border-box;
+  padding: var(--spacing-small) var(--spacing-small) var(--spacing-small);
+}
+
+main .product-carousel .product-carousel-item {
+  gap: var(--spacing-xxsmall);
+}
+
+main .product-discovery-product-actions {
+  display: block;
+}
+
+main .product-discovery-product-actions__add-to-cart .dropin-button,
+main .product-carousel .product-carousel-action .dropin-button {
+  width: 100%;
+  justify-content: center;
+}
+
+main .product-discovery-product-actions__wishlist-toggle,
+main .product-carousel .product-carousel-wishlist {
+  position: absolute;
+  top: var(--spacing-xsmall);
+  right: var(--spacing-xsmall);
+  z-index: 1;
 }
 
 /* Hero: navy-tinted overlay instead of black */
+main .hero-container {
+  margin-bottom: 0;
+}
+
 main .hero::before {
   background: linear-gradient(90deg, rgb(0 17 44 / 70%) 0%, rgb(0 17 44 / 30%) 60%, rgb(0 17 44 / 0%) 100%);
 }
@@ -191,18 +225,277 @@ main .hero a.button:any-link {
   color: var(--mystore-ink);
 }
 
+/* USP strip: full width, light grey (section style "usp" + columns block) */
+main > .section.usp {
+  margin: 0;
+  padding: var(--spacing-big) 0;
+  background: var(--mystore-card);
+}
+
+main .section.usp .columns > div {
+  gap: var(--spacing-medium);
+}
+
+main .section.usp .columns > div > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--spacing-small);
+  align-items: center;
+}
+
+main .section.usp .columns .icon {
+  grid-row: span 2;
+  width: 4rem;
+  height: 4rem;
+}
+
+main .section.usp .columns p {
+  margin: 0;
+}
+
+main .section.usp .columns h3 {
+  margin: 0;
+  font: var(--type-body-1-strong-font);
+}
+
+main .section.usp .columns h3 + p {
+  color: var(--mystore-muted);
+  font: var(--type-body-2-default-font);
+}
+
+/* Category tiles (section style "categories" + cards block) */
+main .section.categories .cards > ul,
+main .section.blog .cards > ul {
+  grid-template-columns: 1fr;
+}
+
+main .section.categories .cards > ul > li {
+  position: relative;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--shape-border-radius-2);
+  background: var(--mystore-card);
+  text-align: center;
+}
+
+main .section.categories .cards .cards-card-image {
+  padding: var(--spacing-big) var(--spacing-big) 0;
+}
+
+main .section.categories .cards > ul > li img {
+  aspect-ratio: 1;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  transition: transform 0.3s ease;
+}
+
+main .section.categories .cards > ul > li:hover img {
+  transform: scale(1.04);
+}
+
+main .section.categories .cards .cards-card-body {
+  margin: var(--spacing-small) var(--spacing-small) var(--spacing-medium);
+}
+
+main .section.categories .cards h3 {
+  margin: 0;
+  font: var(--type-headline-2-strong-font);
+}
+
+main .section.categories .cards h3 a {
+  color: var(--mystore-ink);
+  text-decoration: none;
+}
+
+main .section.categories .cards h3 a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+main .section.categories .cards p {
+  margin: var(--spacing-xxsmall) 0 0;
+  color: var(--mystore-muted);
+  font: var(--type-body-2-default-font);
+}
+
+/* Blog cards (section style "blog" + cards block) */
+main .section.blog .cards > ul > li {
+  overflow: hidden;
+  border: var(--shape-border-width-1) solid var(--mystore-line);
+  border-radius: var(--shape-border-radius-2);
+}
+
+main .section.blog .cards > ul > li img {
+  aspect-ratio: 16 / 10;
+}
+
+main .section.blog .cards .cards-card-body {
+  margin: var(--spacing-medium);
+}
+
+main .section.blog .cards .cards-card-body > p:first-child {
+  margin: 0;
+  color: var(--mystore-muted);
+  font: var(--type-details-overline-font);
+  text-transform: uppercase;
+}
+
+main .section.blog .cards h3 {
+  margin: var(--spacing-xsmall) 0;
+  font: var(--type-headline-2-strong-font);
+}
+
+main .section.blog .cards h3 a {
+  color: var(--mystore-ink);
+  text-decoration: none;
+}
+
+main .section.blog .cards .cards-card-body p {
+  color: var(--mystore-muted);
+  font: var(--type-body-2-default-font);
+}
+
+main .section.blog .cards .cards-card-body p:last-child {
+  margin-bottom: 0;
+}
+
+main .section.blog .cards .cards-card-body p:last-child a {
+  color: var(--mystore-ink);
+  font: var(--type-body-2-strong-font);
+}
+
+main .section.blog .default-content-wrapper:last-child {
+  margin-top: var(--spacing-medium);
+  text-align: center;
+}
+
+@media (min-width: 600px) {
+  main .section.categories .cards > ul,
+  main .section.blog .cards > ul {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 /* Footer */
 footer {
-  border-top: 1px solid var(--mystore-line);
+  border-top: var(--shape-border-width-1) solid var(--mystore-line);
+  background: var(--mystore-card);
 }
 
-footer .footer {
-  background: none;
+footer .footer > div {
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
-/* Header: centered MyStore logo, like mystoredemo.io */
+footer .footer .section {
+  padding: var(--spacing-xbig) 0;
+  border-bottom: var(--shape-border-width-1) solid var(--mystore-line);
+}
+
+footer .footer .section:last-child {
+  padding: var(--spacing-medium) 0;
+  border-bottom: 0;
+}
+
+footer .footer h3 {
+  margin: 0 0 var(--spacing-xsmall);
+  font: var(--type-headline-2-strong-font);
+}
+
+footer .footer h4 {
+  margin: 0 0 var(--spacing-small);
+  color: var(--mystore-ink);
+  font: var(--type-body-2-strong-font);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+footer .footer p {
+  color: var(--mystore-muted);
+}
+
+footer .footer a:any-link {
+  color: var(--mystore-ink);
+  text-decoration: none;
+}
+
+footer .footer a:hover {
+  text-decoration: underline;
+}
+
+footer .footer .columns > div {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-big) var(--spacing-medium);
+  align-items: start;
+}
+
+footer .footer .columns > div > div {
+  flex: unset;
+}
+
+footer .footer .columns ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+footer .footer .columns li {
+  margin-bottom: var(--spacing-xsmall);
+}
+
+footer .footer .columns p {
+  margin: 0 0 var(--spacing-xsmall);
+}
+
+footer .footer .columns > div > div:first-child > p:first-child a {
+  display: block;
+  width: 91px;
+  height: 43px;
+  margin-bottom: var(--spacing-small);
+  overflow: hidden;
+  background: url('/demo/mystore-logo.svg') no-repeat left center / contain;
+  color: transparent;
+  font-size: 0;
+}
+
+footer .footer .section:last-child .default-content-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-small);
+  align-items: center;
+  justify-content: space-between;
+}
+
+footer .footer .section:last-child p:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xsmall);
+  align-items: center;
+}
+
+footer .footer .section:last-child .icon {
+  width: 4.4rem;
+  height: 2.8rem;
+  overflow: hidden;
+  border: var(--shape-border-width-1) solid var(--color-neutral-400);
+  border-radius: 4px;
+  background: white;
+}
+
+footer .footer .section:last-child .icon img {
+  object-fit: cover;
+}
+
+@media (min-width: 900px) {
+  footer .footer .columns > div {
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+  }
+}
+
+/* Header: MyStore logo on the left, menu next to it */
 body header nav .nav-brand {
-  justify-self: center;
   min-width: 91px;
 }
 
@@ -218,17 +511,6 @@ body header nav .nav-brand a {
 }
 
 @media (min-width: 900px) {
-  body header nav {
-    position: relative;
-  }
-
-  body header nav .nav-brand {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-  }
-
   body header nav .nav-sections .default-content-wrapper > ul > li > p,
   body header nav .nav-sections .default-content-wrapper > ul > li > p > a {
     font: var(--type-body-2-strong-font);
